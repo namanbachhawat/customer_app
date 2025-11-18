@@ -314,13 +314,13 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#000000',
     textAlign: 'center',
     marginBottom: 8,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#f0fdf4',
+    color: '#000000',
     textAlign: 'center',
   },
   authCard: {
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   infoText: {
-    color: '#f0fdf4',
+    color: '#000000',
     fontSize: 12,
   },
 });

@@ -2,8 +2,43 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import AppTheme from '../theme';
 
+// Mock MapView component for development - replace with actual react-native-maps when available
+const MapView = ({ children, style, initialRegion }) => (
+  <View style={[style, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+    <Text style={{ color: '#666', fontSize: 14 }}>🗺️ Map View</Text>
+    <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>Install react-native-maps for full functionality</Text>
+    {children}
+  </View>
+);
+
+const Marker = ({ title, description }) => (
+  <View style={{ position: 'absolute', top: 10, left: 10 }}>
+    <Text style={{ fontSize: 12, color: '#333' }}>📍 {title}</Text>
+  </View>
+);
+
 const TrackingScreen = () => {
   const [orderStatus, setOrderStatus] = useState('preparing');
+
+  // Mock locations for demo
+  const shopLocation = {
+    latitude: 19.0760,
+    longitude: 72.8777,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  };
+
+  const deliveryLocation = {
+    latitude: 19.0820,
+    longitude: 72.8820,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  };
+
+  const customerLocation = {
+    latitude: 19.0780,
+    longitude: 72.8790,
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -50,92 +85,127 @@ const TrackingScreen = () => {
   const currentStepIndex = trackingSteps.findIndex(step => step.id === orderStatus);
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Order Tracking</Text>
-        <Text style={styles.headerSubtitle}>Order #12345</Text>
-      </View>
-
-      {/* Restaurant Info */}
-      <View style={styles.restaurantCard}>
-        <View style={styles.restaurantInfo}>
-          <View>
-            <Text style={styles.restaurantName}>Green Garden Restaurant</Text>
-            <Text style={styles.restaurantAddress}>123 Food Street, City Center</Text>
-          </View>
-          <View style={styles.driverInfo}>
-            <Text style={styles.driverName}>Rajesh Kumar</Text>
-            <Text style={styles.driverTitle}>Delivery Partner</Text>
-          </View>
+    <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Order Tracking</Text>
+          <Text style={styles.headerSubtitle}>Order #12345</Text>
         </View>
-      </View>
 
-      {/* Delivery Address */}
-      <View style={styles.addressCard}>
-        <View style={styles.addressHeader}>
-          <Text style={styles.addressTitle}>Delivery Address</Text>
-          <View style={styles.etaBadge}>
-            <Text style={styles.etaText}>25 min</Text>
-          </View>
-        </View>
-        <Text style={styles.addressText}>Apartment 4B, Sunrise Apartments, MG Road</Text>
-      </View>
-
-      {/* Tracking Steps */}
-      <View style={styles.trackingCard}>
-        <Text style={styles.trackingTitle}>Delivery Status</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepsContainer}>
-          {trackingSteps.map((step, index) => (
-            <View key={step.id} style={styles.stepContainer}>
-              <View style={[
-                styles.stepIcon,
-                { backgroundColor: getStatusColor(step.id) }
-              ]}>
-                <Text style={styles.stepIconText}>
-                  {index <= currentStepIndex ? getStatusIcon(step.id) : '○'}
-                </Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={styles.stepLabel}>{step.label}</Text>
-                <Text style={styles.stepTime}>{step.time}</Text>
-              </View>
-              {index < trackingSteps.length - 1 && (
-                <View style={[
-                  styles.stepConnector,
-                  { backgroundColor: index <= currentStepIndex ? getStatusColor(step.id) : '#e5e7eb' }
-                ]} />
-              )}
+        {/* Restaurant Info */}
+        <View style={styles.restaurantCard}>
+          <View style={styles.restaurantInfo}>
+            <View>
+              <Text style={styles.restaurantName}>Green Garden Restaurant</Text>
+              <Text style={styles.restaurantAddress}>123 Food Street, City Center</Text>
             </View>
-          ))}
-        </ScrollView>
-      </View>
+            <View style={styles.driverInfo}>
+              <Text style={styles.driverName}>Rajesh Kumar</Text>
+              <Text style={styles.driverTitle}>Delivery Partner</Text>
+            </View>
+          </View>
+        </View>
 
-      {/* Current Status */}
-      <View style={styles.statusCard}>
-        <View style={styles.statusHeader}>
-          <Text style={styles.statusTitle}>Current Status</Text>
-          <Text style={[styles.statusText, { color: getStatusColor(orderStatus) }]}>
-            {trackingSteps[currentStepIndex]?.label}
+        {/* Delivery Address */}
+        <View style={styles.addressCard}>
+          <View style={styles.addressHeader}>
+            <Text style={styles.addressTitle}>Delivery Address</Text>
+            <View style={styles.etaBadge}>
+              <Text style={styles.etaText}>25 min</Text>
+            </View>
+          </View>
+          <Text style={styles.addressText}>Apartment 4B, Sunrise Apartments, MG Road</Text>
+        </View>
+
+        {/* Progress Bar */}
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>Order Progress</Text>
+          <View style={styles.progressContainer}>
+            {trackingSteps.map((step, index) => (
+              <View key={step.id} style={styles.progressStep}>
+                <View style={[styles.progressIcon, { backgroundColor: index <= currentStepIndex ? getStatusColor(step.id) : '#e5e7eb' }]}>
+                  <Text style={styles.progressIconText}>
+                    {index <= currentStepIndex ? getStatusIcon(step.id) : '○'}
+                  </Text>
+                </View>
+                {index < trackingSteps.length - 1 && (
+                  <View style={[styles.progressLine, { backgroundColor: index < currentStepIndex ? getStatusColor(step.id) : '#e5e7eb' }]} />
+                )}
+              </View>
+            ))}
+          </View>
+          <View style={styles.progressLabels}>
+            {trackingSteps.map((step, index) => (
+              <Text key={step.id} style={[styles.progressLabel, index <= currentStepIndex && styles.activeLabel]}>
+                {step.label}
+              </Text>
+            ))}
+          </View>
+        </View>
+
+        {/* Map Section */}
+        <View style={styles.mapCard}>
+          <Text style={styles.mapTitle}>Live Tracking</Text>
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              initialRegion={shopLocation}
+              showsUserLocation={true}
+              showsMyLocationButton={false}
+            >
+              <Marker
+                coordinate={shopLocation}
+                title="Green Garden Restaurant"
+                description="Your order is being prepared here"
+                pinColor="green"
+              />
+              <Marker
+                coordinate={deliveryLocation}
+                title="Rajesh Kumar"
+                description="Delivery Partner"
+                pinColor="blue"
+              />
+              <Marker
+                coordinate={customerLocation}
+                title="Delivery Address"
+                description="Your location"
+                pinColor="red"
+              />
+            </MapView>
+          </View>
+        </View>
+
+        {/* Current Status */}
+        <View style={styles.statusCard}>
+          <View style={styles.statusHeader}>
+            <Text style={styles.statusTitle}>Current Status</Text>
+            <Text style={[styles.statusText, { color: getStatusColor(orderStatus) }]}>
+              {trackingSteps[currentStepIndex]?.label}
+            </Text>
+          </View>
+          <Text style={styles.statusDescription}>
+            Your order is being prepared by the restaurant chef. Estimated delivery time is 25 minutes.
           </Text>
         </View>
-        <Text style={styles.statusDescription}>
-          Your order is being prepared by the restaurant chef. Estimated delivery time is 25 minutes.
-        </Text>
-      </View>
 
-      {/* Call Driver Button */}
-      <TouchableOpacity style={styles.callButton}>
-        <Text style={styles.callButtonText}>Call Driver</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Call Driver Button */}
+        <TouchableOpacity style={styles.callButton}>
+          <Text style={styles.callButtonText}>Call Driver</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flex: 1,
     backgroundColor: AppTheme.Colors.background,
+  },
+  container: {
+    flex: 1,
+    paddingBottom: 20,
   },
   header: {
     padding: 20,
@@ -229,7 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppTheme.Colors.textLight,
   },
-  trackingCard: {
+  mapCard: {
     margin: 16,
     marginTop: 0,
     padding: 16,
@@ -241,52 +311,77 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  trackingTitle: {
+  mapTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: AppTheme.Colors.text,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  stepsContainer: {
-    marginLeft: -16,
+  mapContainer: {
+    height: 200,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
-  stepContainer: {
+  map: {
+    flex: 1,
+  },
+  progressCard: {
+    margin: 16,
+    marginTop: 0,
+    padding: 16,
+    backgroundColor: AppTheme.Colors.white,
+    borderRadius: 12,
+    shadowColor: AppTheme.Colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppTheme.Colors.text,
+    marginBottom: 20,
+  },
+  progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  stepIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  progressStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  progressIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  stepIconText: {
-    fontSize: 18,
+  progressIconText: {
+    fontSize: 16,
   },
-  stepContent: {
-    alignItems: 'center',
-    marginLeft: 12,
-    marginRight: 20,
-    minWidth: 60,
+  progressLine: {
+    flex: 1,
+    height: 2,
+    marginHorizontal: 8,
   },
-  stepLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: AppTheme.Colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  stepTime: {
+  progressLabel: {
     fontSize: 10,
     color: AppTheme.Colors.textLight,
+    textAlign: 'center',
+    flex: 1,
   },
-  stepConnector: {
-    width: 40,
-    height: 2,
-    marginLeft: 8,
+  activeLabel: {
+    color: AppTheme.Colors.text,
+    fontWeight: '600',
   },
   statusCard: {
     margin: 16,

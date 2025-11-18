@@ -14,6 +14,10 @@ import TrackingScreen from './src/screens/TrackingScreen.js';
 import VendorScreen from './src/screens/VendorScreen.jsx';
 import ReviewsScreen from './src/screens/ReviewsScreen.jsx';
 import SupportScreen from './src/screens/SupportScreen.jsx';
+import NotificationsScreen from './src/screens/NotificationsScreen.jsx';
+import OrdersScreen from './src/screens/OrdersScreen.jsx';
+import OrderDetailsScreen from './src/screens/OrderDetailsScreen.jsx';
+import WalletScreen from './src/screens/WalletScreen.jsx';
 
 const Stack = createStackNavigator();
 
@@ -37,6 +41,10 @@ export default function App() {
         <Stack.Screen name="Vendor" component={VendorScreen} />
         <Stack.Screen name="Reviews" component={ReviewsScreen} />
         <Stack.Screen name="Support" component={SupportScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Orders" component={OrdersScreen} />
+        <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+        <Stack.Screen name="Wallet" component={WalletScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

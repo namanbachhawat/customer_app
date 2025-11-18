@@ -49,6 +49,9 @@ class ApiService {
             { id: 1, name: 'Masala Chai', price: 25, image: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47', category: 'Tea' },
             { id: 2, name: 'Filter Coffee', price: 30, image: 'https://images.unsplash.com/photo-1644433233384-a28e2a225bfc', category: 'Coffee' },
             { id: 3, name: 'Samosa', price: 20, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
+            { id: 10, name: 'Black Tea', price: 20, image: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47', category: 'Tea' },
+            { id: 11, name: 'Cold Coffee', price: 45, image: 'https://images.unsplash.com/photo-1644433233384-a28e2a225bfc', category: 'Coffee' },
+            { id: 12, name: 'Pakora', price: 30, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
           ]
         },
         {
@@ -66,6 +69,9 @@ class ApiService {
             { id: 4, name: 'Green Tea', price: 35, image: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47', category: 'Tea' },
             { id: 5, name: 'Cold Coffee', price: 45, image: 'https://images.unsplash.com/photo-1644433233384-a28e2a225bfc', category: 'Coffee' },
             { id: 6, name: 'Dhokla', price: 40, image: 'https://images.unsplash.com/photo-1680359939304-7e27ee183e7a', category: 'Snacks' },
+            { id: 13, name: 'Herbal Tea', price: 40, image: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47', category: 'Tea' },
+            { id: 14, name: 'Cappuccino', price: 55, image: 'https://images.unsplash.com/photo-1644433233384-a28e2a225bfc', category: 'Coffee' },
+            { id: 15, name: 'Vada', price: 25, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
           ]
         },
         {
@@ -83,15 +89,53 @@ class ApiService {
             { id: 7, name: 'Dhokla', price: 40, image: 'https://images.unsplash.com/photo-1680359939304-7e27ee183e7a', category: 'Snacks' },
             { id: 8, name: 'Khakra', price: 25, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
             { id: 9, name: 'Gulab Jamun', price: 50, image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e', category: 'Desserts' },
+            { id: 16, name: 'Khakra', price: 30, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
+            { id: 17, name: 'Ras Malai', price: 60, image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e', category: 'Desserts' },
+            { id: 18, name: 'Pani Puri', price: 35, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
+          ]
+        },
+        {
+          id: 5,
+          name: 'Sweet Dreams Bakery',
+          rating: 4.7,
+          time: '15-20 min',
+          image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e',
+          offers: '15% off',
+          price: '₹120 for two',
+          distance: '1.8 km',
+          promoted: false,
+          description: 'Freshly baked desserts and pastries',
+          menu: [
+            { id: 19, name: 'Chocolate Cake', price: 80, image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e', category: 'Desserts' },
+            { id: 20, name: 'Croissant', price: 45, image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e', category: 'Desserts' },
+            { id: 21, name: 'Muffin', price: 35, image: 'https://images.unsplash.com/photo-1617013451942-441bbba35a5e', category: 'Desserts' },
+          ]
+        },
+        {
+          id: 6,
+          name: 'Spicy Bites',
+          rating: 4.4,
+          time: '12-18 min',
+          image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe',
+          offers: 'Free delivery',
+          price: '₹90 for two',
+          distance: '1.1 km',
+          promoted: false,
+          description: 'Spicy street food favorites',
+          menu: [
+            { id: 22, name: 'Pani Puri', price: 35, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
+            { id: 23, name: 'Bhelpuri', price: 40, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
+            { id: 24, name: 'Sev Puri', price: 45, image: 'https://images.unsplash.com/photo-1616813769023-d0557572ddbe', category: 'Snacks' },
           ]
         },
       ],
 
-      // Cart
-      cart: [
-        { id: 1, name: 'Masala Chai', price: 25, quantity: 2, vendorId: 1 },
-        { id: 2, name: 'Samosa', price: 20, quantity: 1, vendorId: 1 },
-      ],
+      // Cart (Multi-restaurant structure)
+      cart: {
+        items: [], // [{ restaurantId: 1, restaurantName: 'Restaurant A', items: [...], specialInstructions: '' }]
+        globalCoupon: null,
+        deliveryAddress: null
+      },
 
       // Orders
       orders: [
@@ -204,47 +248,194 @@ class ApiService {
     return { success: false, error: 'Vendor not found' };
   }
 
-  // Cart
+  // Cart (Multi-restaurant)
   async getCart() {
     await this.delay(400);
     return { success: true, cart: this.mockData.cart };
   }
 
-  async addToCart(item) {
+  async addToCart(item, restaurantId, restaurantName) {
     await this.delay(300);
-    const existingItem = this.mockData.cart.find(cartItem => cartItem.id === item.id);
+
+    // Find existing restaurant group or create new one
+    let restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+
+    if (!restaurantGroup) {
+      restaurantGroup = {
+        restaurantId,
+        restaurantName,
+        items: [],
+        specialInstructions: '',
+        coupons: []
+      };
+      this.mockData.cart.items.push(restaurantGroup);
+    }
+
+    // Check if item already exists in this restaurant's group
+    const existingItem = restaurantGroup.items.find(cartItem => cartItem.id === item.id);
+
     if (existingItem) {
       existingItem.quantity += item.quantity || 1;
     } else {
-      this.mockData.cart.push({ ...item, quantity: item.quantity || 1 });
+      restaurantGroup.items.push({ ...item, quantity: item.quantity || 1 });
     }
+
     return { success: true, cart: this.mockData.cart };
   }
 
-  async updateCartItem(itemId, quantity) {
+  async updateCartItem(restaurantId, itemId, quantity) {
     await this.delay(300);
-    const item = this.mockData.cart.find(cartItem => cartItem.id === itemId);
+
+    const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+    if (!restaurantGroup) {
+      return { success: false, error: 'Restaurant group not found' };
+    }
+
+    const item = restaurantGroup.items.find(cartItem => cartItem.id === itemId);
     if (item) {
       if (quantity > 0) {
         item.quantity = quantity;
       } else {
-        this.mockData.cart = this.mockData.cart.filter(cartItem => cartItem.id !== itemId);
+        restaurantGroup.items = restaurantGroup.items.filter(cartItem => cartItem.id !== itemId);
+        // Remove restaurant group if no items left
+        if (restaurantGroup.items.length === 0) {
+          this.mockData.cart.items = this.mockData.cart.items.filter(group => group.restaurantId !== restaurantId);
+        }
       }
       return { success: true, cart: this.mockData.cart };
     }
     return { success: false, error: 'Item not found in cart' };
   }
 
-  async removeFromCart(itemId) {
+  async removeFromCart(restaurantId, itemId) {
     await this.delay(300);
-    this.mockData.cart = this.mockData.cart.filter(item => item.id !== itemId);
+
+    const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+    if (!restaurantGroup) {
+      return { success: false, error: 'Restaurant group not found' };
+    }
+
+    restaurantGroup.items = restaurantGroup.items.filter(item => item.id !== itemId);
+
+    // Remove restaurant group if no items left
+    if (restaurantGroup.items.length === 0) {
+      this.mockData.cart.items = this.mockData.cart.items.filter(group => group.restaurantId !== restaurantId);
+    }
+
+    return { success: true, cart: this.mockData.cart };
+  }
+
+  async addSpecialInstructions(restaurantId, instructions) {
+    await this.delay(200);
+
+    const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+    if (!restaurantGroup) {
+      return { success: false, error: 'Restaurant group not found' };
+    }
+
+    restaurantGroup.specialInstructions = instructions;
+    return { success: true, cart: this.mockData.cart };
+  }
+
+  async addItemSpecialInstructions(restaurantId, itemId, instructions) {
+    await this.delay(200);
+
+    const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+    if (!restaurantGroup) {
+      return { success: false, error: 'Restaurant group not found' };
+    }
+
+    const item = restaurantGroup.items.find(item => item.id === itemId);
+    if (!item) {
+      return { success: false, error: 'Item not found' };
+    }
+
+    item.specialInstructions = instructions;
+    return { success: true, cart: this.mockData.cart };
+  }
+
+  async clearRestaurantCart(restaurantId) {
+    await this.delay(300);
+    this.mockData.cart.items = this.mockData.cart.items.filter(group => group.restaurantId !== restaurantId);
     return { success: true, cart: this.mockData.cart };
   }
 
   async clearCart() {
     await this.delay(300);
-    this.mockData.cart = [];
+    this.mockData.cart.items = [];
+    this.mockData.cart.globalCoupon = null;
+    this.mockData.cart.deliveryAddress = null;
     return { success: true };
+  }
+
+  async applyCoupon(restaurantId, couponCode) {
+    await this.delay(400);
+
+    // Mock coupon validation
+    const coupons = {
+      'GLOBAL10': { type: 'global', discount: 10, minOrder: 100 },
+      'REST20': { type: 'restaurant', discount: 20, minOrder: 200 },
+      'EXPIRED': { type: 'expired', discount: 0 }
+    };
+
+    const coupon = coupons[couponCode];
+    if (!coupon) {
+      return { success: false, error: 'Invalid coupon code' };
+    }
+
+    if (coupon.type === 'expired') {
+      return { success: false, error: 'Coupon has expired' };
+    }
+
+    if (restaurantId) {
+      // Restaurant-specific coupon
+      const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+      if (!restaurantGroup) {
+        return { success: false, error: 'Restaurant not found in cart' };
+      }
+      restaurantGroup.coupons.push({ ...coupon, code: couponCode });
+    } else {
+      // Global coupon
+      this.mockData.cart.globalCoupon = { ...coupon, code: couponCode };
+    }
+
+    return { success: true, cart: this.mockData.cart };
+  }
+
+  async removeCoupon(restaurantId, couponCode) {
+    await this.delay(300);
+
+    if (restaurantId) {
+      const restaurantGroup = this.mockData.cart.items.find(group => group.restaurantId === restaurantId);
+      if (restaurantGroup) {
+        restaurantGroup.coupons = restaurantGroup.coupons.filter(coupon => coupon.code !== couponCode);
+      }
+    } else {
+      if (this.mockData.cart.globalCoupon?.code === couponCode) {
+        this.mockData.cart.globalCoupon = null;
+      }
+    }
+
+    return { success: true, cart: this.mockData.cart };
+  }
+
+  async setDeliveryAddress(addressId) {
+    await this.delay(300);
+
+    const address = this.mockData.user.addresses.find(addr => addr.id === addressId);
+    if (!address) {
+      return { success: false, error: 'Address not found' };
+    }
+
+    this.mockData.cart.deliveryAddress = address;
+
+    // Recalculate delivery fees for all restaurants (mock logic)
+    this.mockData.cart.items.forEach(group => {
+      group.deliveryFee = Math.floor(Math.random() * 40) + 20; // Random fee between 20-60
+      group.deliveryTime = Math.floor(Math.random() * 20) + 15; // Random time between 15-35 min
+    });
+
+    return { success: true, cart: this.mockData.cart };
   }
 
   // Orders
@@ -341,6 +532,22 @@ class ApiService {
         { id: 2, title: 'New Offer', message: 'Get 30% off on your next order.', time: '1 hour ago', read: false },
         { id: 3, title: 'Welcome to Nashtto', message: 'Thank you for joining us! Enjoy your first order.', time: '1 day ago', read: true },
       ]
+    };
+  }
+
+  // Wallet
+  async getWallet() {
+    await this.delay(400);
+    return {
+      success: true,
+      wallet: {
+        balance: 250,
+        transactions: [
+          { id: 1, type: 'credit', amount: 100, description: 'Refund for order #12345', date: '2024-11-05' },
+          { id: 2, type: 'debit', amount: 50, description: 'Used for order #12346', date: '2024-11-04' },
+          { id: 3, type: 'credit', amount: 200, description: 'Welcome bonus', date: '2024-11-01' },
+        ]
+      }
     };
   }
 

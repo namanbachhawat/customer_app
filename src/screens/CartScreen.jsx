@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  RefreshControl,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -14,8 +16,12 @@ import { Card, CardContent } from '../components/Card';
 import api from '../services/api';
 
 const CartScreen = ({ navigation }) => {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState({ items: [] });
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  const [selectedRestaurants, setSelectedRestaurants] = useState(new Set());
 
   useEffect(() => {
     loadCart();
@@ -26,20 +32,30 @@ const CartScreen = ({ navigation }) => {
       const response = await api.getCart();
       if (response.success) {
         setCart(response.cart);
+        // Initialize selected restaurants
+        const allRestaurants = new Set(response.cart.items.map(group => group.restaurantId));
+        setSelectedRestaurants(allRestaurants);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to load cart items');
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  const updateQuantity = async (itemId, newQuantity) => {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCart();
+  };
+
+  const updateQuantity = async (restaurantId, itemId, newQuantity) => {
     if (newQuantity === 0) {
-      removeItem(itemId);
+      removeItem(restaurantId, itemId);
       return;
     }
 
     try {
-      const response = await api.updateCartItem(itemId, newQuantity);
+      const response = await api.updateCartItem(restaurantId, itemId, newQuantity);
       if (response.success) {
         setCart(response.cart);
       }
@@ -48,15 +64,63 @@ const CartScreen = ({ navigation }) => {
     }
   };
 
-  const removeItem = async (itemId) => {
+  const removeItem = async (restaurantId, itemId) => {
     try {
-      const response = await api.removeFromCart(itemId);
+      const response = await api.removeFromCart(restaurantId, itemId);
       if (response.success) {
         setCart(response.cart);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to remove item');
     }
+  };
+
+  const clearRestaurantCart = async (restaurantId) => {
+    try {
+      const response = await api.clearRestaurantCart(restaurantId);
+      if (response.success) {
+        setCart(response.cart);
+        const newSelected = new Set(selectedRestaurants);
+        newSelected.delete(restaurantId);
+        setSelectedRestaurants(newSelected);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to clear restaurant cart');
+    }
+  };
+
+  const applyCoupon = async (restaurantId, code) => {
+    try {
+      const response = await api.applyCoupon(restaurantId, code);
+      if (response.success) {
+        setCart(response.cart);
+        Alert.alert('Success', 'Coupon applied successfully!');
+        setCouponCode('');
+        setShowCouponInput(false);
+      } else {
+        Alert.alert('Invalid Coupon', response.error);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to apply coupon');
+    }
+  };
+
+  const toggleRestaurantSelection = (restaurantId) => {
+    const newSelected = new Set(selectedRestaurants);
+    if (newSelected.has(restaurantId)) {
+      newSelected.delete(restaurantId);
+    } else {
+      newSelected.add(restaurantId);
+    }
+    setSelectedRestaurants(newSelected);
+  };
+
+  const getSelectedRestaurantsTotal = () => {
+    const selectedItems = cart.items.filter(group => selectedRestaurants.has(group.restaurantId));
+    return selectedItems.reduce((total, group) => {
+      const subtotal = group.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      return total + subtotal + (group.deliveryFee || 0) + (subtotal * 0.05); // Including tax
+    }, 0);
   };
 
   const clearCart = async () => {
@@ -72,7 +136,8 @@ const CartScreen = ({ navigation }) => {
             try {
               const response = await api.clearCart();
               if (response.success) {
-                setCart([]);
+                setCart({ items: [] });
+                setSelectedRestaurants(new Set());
               }
             } catch (error) {
               Alert.alert('Error', 'Failed to clear cart');
@@ -84,22 +149,66 @@ const CartScreen = ({ navigation }) => {
   };
 
   const handleCheckout = () => {
-    if (cart.length === 0) {
+    if (cart.items.length === 0) {
       Alert.alert('Empty Cart', 'Please add items to your cart before checkout');
       return;
     }
-    navigation.navigate('Payment', { cart });
+
+    if (selectedRestaurants.size === 0) {
+      Alert.alert('No Restaurants Selected', 'Please select at least one restaurant to checkout');
+      return;
+    }
+
+    const selectedItems = cart.items.filter(group => selectedRestaurants.has(group.restaurantId));
+    navigation.navigate('Payment', {
+      cart: selectedItems,
+      deliveryAddress: cart.deliveryAddress,
+      globalCoupon: cart.globalCoupon
+    });
   };
 
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const getTotalPrice = (restaurantGroup = null) => {
+    if (restaurantGroup) {
+      return restaurantGroup.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+    }
+    return cart.items.reduce((total, group) =>
+      total + group.items.reduce((sum, item) => sum + (item.price * item.quantity), 0), 0);
   };
 
   const getTotalItems = () => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
+    return cart.items.reduce((total, group) => total + group.items.length, 0);
   };
 
-  const renderCartItem = ({ item }) => (
+  const calculateRestaurantTotal = (restaurantGroup) => {
+    const subtotal = getTotalPrice(restaurantGroup);
+    const deliveryFee = restaurantGroup.deliveryFee || 0;
+    const tax = subtotal * 0.05; // 5% GST
+    let discount = 0;
+
+    // Apply restaurant-specific coupons
+    if (restaurantGroup.coupons) {
+      restaurantGroup.coupons.forEach(coupon => {
+        if (coupon.type === 'restaurant' && subtotal >= coupon.minOrder) {
+          discount += subtotal * (coupon.discount / 100);
+        }
+      });
+    }
+
+    // Apply global coupon
+    if (cart.globalCoupon && subtotal >= cart.globalCoupon.minOrder) {
+      discount += subtotal * (cart.globalCoupon.discount / 100);
+    }
+
+    return {
+      subtotal: subtotal || 0,
+      deliveryFee,
+      tax: tax || 0,
+      discount,
+      total: (subtotal + deliveryFee + tax - discount) || 0
+    };
+  };
+
+  const renderCartItem = ({ item, restaurantId }) => (
     <Card style={styles.cartItem}>
       <View style={styles.itemContent}>
         <Image
@@ -109,17 +218,20 @@ const CartScreen = ({ navigation }) => {
         <CardContent style={styles.itemDetails}>
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemPrice}>₹{item.price}</Text>
+          {item.specialInstructions && (
+            <Text style={styles.specialInstructionsText}>Note: {item.specialInstructions}</Text>
+          )}
           <View style={styles.quantityControls}>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => updateQuantity(item.id, item.quantity - 1)}
+              onPress={() => updateQuantity(restaurantId, item.id, item.quantity - 1)}
             >
               <Text style={styles.quantityButtonText}>-</Text>
             </TouchableOpacity>
             <Text style={styles.quantityText}>{item.quantity}</Text>
             <TouchableOpacity
               style={styles.quantityButton}
-              onPress={() => updateQuantity(item.id, item.quantity + 1)}
+              onPress={() => updateQuantity(restaurantId, item.id, item.quantity + 1)}
             >
               <Text style={styles.quantityButtonText}>+</Text>
             </TouchableOpacity>
@@ -127,13 +239,96 @@ const CartScreen = ({ navigation }) => {
         </CardContent>
         <TouchableOpacity
           style={styles.removeButton}
-          onPress={() => removeItem(item.id)}
+          onPress={() => removeItem(restaurantId, item.id)}
         >
           <Text style={styles.removeButtonText}>✕</Text>
         </TouchableOpacity>
       </View>
     </Card>
   );
+
+  const renderRestaurantSection = (restaurantGroup) => {
+    const totals = calculateRestaurantTotal(restaurantGroup);
+    const isSelected = selectedRestaurants.has(restaurantGroup.restaurantId);
+
+    return (
+      <View key={restaurantGroup.restaurantId} style={styles.restaurantSection}>
+        {/* Restaurant Header */}
+        <View style={styles.restaurantHeader}>
+          <TouchableOpacity
+            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+            onPress={() => toggleRestaurantSelection(restaurantGroup.restaurantId)}
+          >
+            {isSelected && <Text style={styles.checkboxText}>✓</Text>}
+          </TouchableOpacity>
+          <View style={styles.restaurantInfo}>
+            <Text style={[styles.restaurantName, styles.boldText]}>{restaurantGroup.restaurantName}</Text>
+            <Text style={styles.deliveryInfo}>
+              {restaurantGroup.deliveryTime} min • ₹{restaurantGroup.deliveryFee} delivery
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => clearRestaurantCart(restaurantGroup.restaurantId)}
+          >
+            <Text style={styles.clearText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Items */}
+        <View style={styles.itemsContainer}>
+          {restaurantGroup.items.map((item, index) => (
+            <View key={item.id || index}>
+              {renderCartItem({ item, restaurantId: restaurantGroup.restaurantId })}
+            </View>
+          ))}
+        </View>
+
+        {/* Special Instructions */}
+        <View style={styles.specialInstructionsContainer}>
+          <TextInput
+            style={styles.instructionsInput}
+            placeholder="Restaurant instructions (e.g., no cutlery)"
+            value={restaurantGroup.specialInstructions}
+            onChangeText={(text) => {
+              // Update special instructions
+              const updatedCart = { ...cart };
+              const group = updatedCart.items.find(g => g.restaurantId === restaurantGroup.restaurantId);
+              group.specialInstructions = text;
+              setCart(updatedCart);
+            }}
+            multiline
+          />
+        </View>
+
+        {/* Restaurant Summary */}
+        <View style={styles.restaurantSummary}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Subtotal:</Text>
+            <Text style={styles.summaryValue}>₹{totals.subtotal}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Delivery Fee:</Text>
+            <Text style={styles.summaryValue}>₹{totals.deliveryFee}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>GST:</Text>
+            <Text style={styles.summaryValue}>₹{totals.tax.toFixed(2)}</Text>
+          </View>
+          {totals.discount > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Discount:</Text>
+              <Text style={[styles.summaryValue, styles.discountText]}>-₹{totals.discount.toFixed(2)}</Text>
+            </View>
+          )}
+          <View style={[styles.summaryRow, styles.totalRow]}>
+            <Text style={styles.totalLabel}>Total:</Text>
+            <Text style={styles.totalValue}>₹{totals.total.toFixed(2)}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -146,14 +341,14 @@ const CartScreen = ({ navigation }) => {
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Cart</Text>
-        {cart.length > 0 && (
+        {cart.items.length > 0 && (
           <TouchableOpacity style={styles.clearButton} onPress={clearCart}>
             <Text style={styles.clearButtonText}>Clear</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {cart.length === 0 ? (
+      {cart.items.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🛒</Text>
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
@@ -166,41 +361,90 @@ const CartScreen = ({ navigation }) => {
         </View>
       ) : (
         <>
-          <ScrollView style={styles.cartList} showsVerticalScrollIndicator={false}>
-            {cart.map((item) => (
-              <View key={item.id}>
-                {renderCartItem({ item })}
+          {/* Global Coupon Section */}
+          <View style={styles.globalCouponSection}>
+            <TouchableOpacity
+              style={styles.couponButton}
+              onPress={() => setShowCouponInput(!showCouponInput)}
+            >
+              <Text style={styles.couponButtonText}>
+                {cart.globalCoupon ? `Global Coupon: ${cart.globalCoupon.code}` : 'Apply Global Coupon'}
+              </Text>
+            </TouchableOpacity>
+            {showCouponInput && (
+              <View style={styles.couponInputContainer}>
+                <TextInput
+                  style={styles.couponInput}
+                  placeholder="Enter coupon code"
+                  value={couponCode}
+                  onChangeText={setCouponCode}
+                />
+                <TouchableOpacity
+                  style={styles.applyCouponButton}
+                  onPress={() => applyCoupon(null, couponCode)}
+                >
+                  <Text style={styles.applyCouponText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <ScrollView
+            style={styles.cartList}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {cart.items && cart.items.map((restaurantGroup, index) => (
+              <View key={restaurantGroup.restaurantId || index}>
+                {renderRestaurantSection(restaurantGroup)}
               </View>
             ))}
           </ScrollView>
 
-          {/* Cart Summary */}
-          <View style={styles.cartSummary}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Items ({getTotalItems()}):</Text>
-              <Text style={styles.summaryValue}>₹{getTotalPrice()}</Text>
+          {/* Global Coupon Section at Bottom */}
+          <View style={styles.bottomCouponSection}>
+            <View style={styles.couponInputContainer}>
+              <TextInput
+                style={styles.couponInput}
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChangeText={setCouponCode}
+              />
+              <TouchableOpacity
+                style={styles.applyCouponButton}
+                onPress={() => applyCoupon(null, couponCode)}
+              >
+                <Text style={styles.applyCouponText}>Apply</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Delivery Fee:</Text>
-              <Text style={styles.summaryValue}>₹40</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>GST:</Text>
-              <Text style={styles.summaryValue}>₹{(getTotalPrice() * 0.05).toFixed(2)}</Text>
-            </View>
-            <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalValue}>₹{(getTotalPrice() + 40 + getTotalPrice() * 0.05).toFixed(2)}</Text>
-            </View>
+            {cart.globalCoupon && (
+              <Text style={styles.appliedGlobalCoupon}>Applied: {cart.globalCoupon.code} (-{cart.globalCoupon.discount}%)</Text>
+            )}
           </View>
+
+          {/* Global Cart Summary */}
+          {selectedRestaurants.size > 0 && (
+            <View style={styles.globalSummary}>
+              <Text style={styles.summaryTitle}>
+                {selectedRestaurants.size} restaurant{selectedRestaurants.size > 1 ? 's' : ''} selected
+              </Text>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Total Amount:</Text>
+                <Text style={styles.summaryValue}>₹{getSelectedRestaurantsTotal().toFixed(2)}</Text>
+              </View>
+            </View>
+          )}
 
           {/* Checkout Button */}
           <View style={styles.checkoutContainer}>
             <Button
-              title={`Proceed to Checkout • ₹${(getTotalPrice() + 40 + getTotalPrice() * 0.05).toFixed(2)}`}
+              title={`Checkout Selected (${selectedRestaurants.size}) • ₹${getSelectedRestaurantsTotal().toFixed(2)}`}
               onPress={handleCheckout}
               loading={loading}
               style={styles.checkoutButton}
+              disabled={selectedRestaurants.size === 0}
             />
           </View>
         </>
@@ -212,7 +456,7 @@ const CartScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f0fdf4',
   },
   header: {
     flexDirection: 'row',
@@ -393,9 +637,83 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
+    paddingBottom: 40, // Add extra padding to prevent cutoff
   },
   checkoutButton: {
     backgroundColor: '#22c55e',
+  },
+  specialInstructionsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  instructionsInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#1e293b',
+    minHeight: 40,
+    textAlignVertical: 'top',
+    backgroundColor: '#ffffff',
+  },
+  frequentlyBought: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  recommendationItem: {
+    width: 100,
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  recommendationImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  recommendationName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  recommendationPrice: {
+    fontSize: 12,
+    color: '#22c55e',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  addRecommendationBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#22c55e',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addRecommendationText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

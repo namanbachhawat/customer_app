@@ -9,10 +9,12 @@ import {
   Image,
   FlatList,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Card, CardContent } from '../components/Card';
+import AddressSelectionModal from './AddressSelectionModal';
 import api from '../services/api';
 
 const HomeScreen = ({ navigation }) => {
@@ -23,9 +25,13 @@ const HomeScreen = ({ navigation }) => {
   const [categories, setCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sortBy, setSortBy] = useState('rating');
 
   useEffect(() => {
     loadHomeData();
+    loadCart();
+    loadWallet();
   }, []);
 
   const loadHomeData = async () => {
@@ -58,6 +64,117 @@ const HomeScreen = ({ navigation }) => {
 
   const handleCategoryPress = (category) => {
     navigation.navigate('Search', { category: category.name });
+  };
+
+  const handleSortPress = (sortKey) => {
+    setSortBy(sortKey);
+    // Sort vendors based on the selected criteria
+    const sortedVendors = [...vendors].sort((a, b) => {
+      switch (sortKey) {
+        case 'price_low':
+          return parseFloat(a.price.replace('₹', '').replace(' for two', '')) -
+                 parseFloat(b.price.replace('₹', '').replace(' for two', ''));
+        case 'price_high':
+          return parseFloat(b.price.replace('₹', '').replace(' for two', '')) -
+                 parseFloat(a.price.replace('₹', '').replace(' for two', ''));
+        case 'rating':
+          return b.rating - a.rating;
+        case 'distance':
+          return parseFloat(a.distance) - parseFloat(b.distance);
+        default:
+          return 0;
+      }
+    });
+    setVendors(sortedVendors);
+  };
+
+  const handleSeeAllOrderAgain = () => {
+    navigation.navigate('Search', { section: 'orderAgain' });
+  };
+
+  const handleSeeAllVendors = () => {
+    navigation.navigate('Search', { section: 'allVendors' });
+  };
+
+
+  const handleNotificationPress = () => {
+    navigation.navigate('Notifications');
+  };
+
+  const handleClaimOffer = () => {
+    Alert.alert('Offer Claimed!', 'Code NASHTO40 applied to your account.');
+  };
+
+  const [cart, setCart] = useState([]);
+  const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+
+  const loadCart = async () => {
+    try {
+      const response = await api.getCart();
+      if (response.success) {
+        setCart(response.cart);
+      }
+    } catch (error) {
+      console.error('Failed to load cart:', error);
+    }
+  };
+
+  const loadWallet = async () => {
+    try {
+      const response = await api.getWallet();
+      if (response.success) {
+        setWallet(response.wallet);
+      }
+    } catch (error) {
+      console.error('Failed to load wallet:', error);
+    }
+  };
+
+  const handleAddToCart = async (item, restaurantId, restaurantName) => {
+    try {
+      const response = await api.addToCart(item, restaurantId, restaurantName);
+      if (response.success) {
+        setCart(response.cart);
+        Alert.alert('Added to Cart', `${item.name} added to your cart.`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item to cart');
+    }
+  };
+
+  const handleUpdateCartItem = async (restaurantId, itemId, quantity) => {
+    try {
+      const response = await api.updateCartItem(restaurantId, itemId, quantity);
+      if (response.success) {
+        setCart(response.cart);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update item quantity');
+    }
+  };
+
+  const getItemQuantity = (itemId) => {
+    // Search through all restaurant groups
+    for (const restaurantGroup of cart.items || []) {
+      const cartItem = restaurantGroup.items.find(item => item.id === itemId);
+      if (cartItem) return cartItem.quantity;
+    }
+    return 0;
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadHomeData();
+    setRefreshing(false);
+  };
+
+  const handleAddressPress = () => {
+    setAddressModalVisible(true);
+  };
+
+  const handleAddressSelect = (address) => {
+    setSelectedAddress(addresses.findIndex(addr => addr.id === address.id));
   };
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -105,7 +222,7 @@ const HomeScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.addressContainer}>
+        <TouchableOpacity style={styles.addressContainer} onPress={handleAddressPress}>
           <View style={styles.locationIcon}>
             <Text style={styles.locationIconText}>📍</Text>
           </View>
@@ -116,15 +233,15 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.addressText}>• {addresses[selectedAddress]?.address || 'Loading address...'}</Text>
             </View>
           </View>
-        </View>
+          <View style={styles.dropdownIcon}>
+            <Text style={styles.dropdownIconText}>▼</Text>
+          </View>
+        </TouchableOpacity>
         
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionIcon}>👤</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('Support')}
+            onPress={handleNotificationPress}
           >
             <Text style={styles.actionIcon}>🔔</Text>
             {unreadNotificationsCount > 0 && (
@@ -133,11 +250,12 @@ const HomeScreen = ({ navigation }) => {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('Cart')}
+            onPress={() => navigation.navigate('Wallet')}
           >
             <Text style={styles.actionIcon}>💰</Text>
+            <Text style={styles.walletBalance}>₹{wallet.balance}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -152,12 +270,34 @@ const HomeScreen = ({ navigation }) => {
           onChangeText={setSearchText}
           onSubmitEditing={handleSearch}
         />
-        <Text style={styles.micIcon}>🎤</Text>
       </TouchableOpacity>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Filter Section */}
+      <View style={styles.filterContainer}>
+        <Text style={styles.filterTitle}>Sort by:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {[
+            { label: 'Price: Low to High', key: 'price_low' },
+            { label: 'Price: High to Low', key: 'price_high' },
+            { label: 'Rating', key: 'rating' },
+            { label: 'Distance', key: 'distance' }
+          ].map((filter) => (
+            <TouchableOpacity key={filter.key} style={styles.filterButton} onPress={() => handleSortPress(filter.key)}>
+              <Text style={styles.filterText}>{filter.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Welcome Offer */}
-        <View style={styles.offerCard}>
+        <View style={[styles.offerCard, { backgroundColor: '#22c55e' }]}>
           <View style={styles.offerContent}>
             <View style={styles.offerTextContainer}>
               <Text style={styles.offerTitle}>Welcome Offer!</Text>
@@ -165,8 +305,28 @@ const HomeScreen = ({ navigation }) => {
                 Get 40% off on your first 3 orders with code NASHTO40
               </Text>
             </View>
-            <Button title="Claim" size="small" style={styles.claimButton} />
+            <Button title="Claim" size="small" style={styles.claimButton} onPress={handleClaimOffer} />
           </View>
+        </View>
+
+        {/* Add Offer Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Special Offers</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {/* Placeholder for offers */}
+            <View style={styles.offerItem}>
+              <Text style={styles.offerItemTitle}>Free Delivery</Text>
+              <Text style={styles.offerItemSubtitle}>On orders above ₹500</Text>
+            </View>
+            <View style={styles.offerItem}>
+              <Text style={styles.offerItemTitle}>₹100 Off</Text>
+              <Text style={styles.offerItemSubtitle}>Use code WELCOME</Text>
+            </View>
+            <View style={styles.offerItem}>
+              <Text style={styles.offerItemTitle}>Buy 1 Get 1</Text>
+              <Text style={styles.offerItemSubtitle}>On selected items</Text>
+            </View>
+          </ScrollView>
         </View>
 
         {/* Categories */}
@@ -185,19 +345,42 @@ const HomeScreen = ({ navigation }) => {
         {/* Order Again */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Order again</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          </View>
+             <Text style={styles.sectionTitle}>Order again</Text>
+             <TouchableOpacity onPress={handleSeeAllOrderAgain}>
+               <Text style={styles.seeAllText}>See all</Text>
+             </TouchableOpacity>
+           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {['Masala Chai', 'Samosa', 'Filter Coffee', 'Dhokla'].map((item, index) => (
-              <View key={index} style={styles.orderAgainItem}>
-                <View style={styles.orderAgainImage} />
-                <Text style={styles.orderAgainName}>{item}</Text>
+            {[
+              { id: 1, name: 'Masala Chai', price: 25, vendorId: 1 },
+              { id: 2, name: 'Samosa', price: 20, vendorId: 1 },
+              { id: 3, name: 'Filter Coffee', price: 30, vendorId: 1 },
+              { id: 4, name: 'Dhokla', price: 40, vendorId: 2 }
+            ].map((item) => (
+              <View key={item.id} style={styles.orderAgainItem}>
+                <Image source={{ uri: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47?w=100' }} style={styles.orderAgainImage} />
+                <Text style={styles.orderAgainName}>{item.name}</Text>
                 <Text style={styles.orderAgainVendor}>Green Tea House</Text>
-                <Text style={styles.orderAgainPrice}>₹25</Text>
-                <Button title="Add" size="small" style={styles.addButton} />
+                <Text style={styles.orderAgainPrice}>₹{item.price}</Text>
+                {getItemQuantity(item.id) > 0 ? (
+                  <View style={styles.quantityControls}>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => handleUpdateCartItem(1, item.id, getItemQuantity(item.id) - 1)}
+                    >
+                      <Text style={styles.quantityButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.quantityText}>{getItemQuantity(item.id)}</Text>
+                    <TouchableOpacity
+                      style={styles.quantityButton}
+                      onPress={() => handleUpdateCartItem(1, item.id, getItemQuantity(item.id) + 1)}
+                    >
+                      <Text style={styles.quantityButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Button title="Add" size="small" style={styles.addButton} onPress={() => handleAddToCart(item, 1, 'Green Tea House')} />
+                )}
               </View>
             ))}
           </ScrollView>
@@ -206,11 +389,11 @@ const HomeScreen = ({ navigation }) => {
         {/* Popular Stores */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular stores near you</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See all ›</Text>
-            </TouchableOpacity>
-          </View>
+             <Text style={styles.sectionTitle}>Popular stores near you</Text>
+             <TouchableOpacity onPress={handleSeeAllVendors}>
+               <Text style={styles.seeAllText}>See all ›</Text>
+             </TouchableOpacity>
+           </View>
           <FlatList
             data={vendors}
             renderItem={renderVendor}
@@ -221,6 +404,40 @@ const HomeScreen = ({ navigation }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <Text style={[styles.navIcon, { color: '#22c55e' }]}>🏠</Text>
+          <Text style={[styles.navText, { color: '#22c55e' }]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Cart')}>
+          <View style={styles.navIconContainer}>
+            <Text style={[styles.navIcon, { color: '#64748b' }]}>🛒</Text>
+            {(cart.items || []).reduce((total, group) => total + group.items.length, 0) > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{(cart.items || []).reduce((total, group) => total + group.items.length, 0)}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.navText, { color: '#64748b' }]}>Cart</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Orders')}>
+          <Text style={[styles.navIcon, { color: '#64748b' }]}>📋</Text>
+          <Text style={[styles.navText, { color: '#64748b' }]}>Orders</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+          <Text style={[styles.navIcon, { color: '#64748b' }]}>👤</Text>
+          <Text style={[styles.navText, { color: '#64748b' }]}>Profile</Text>
+        </TouchableOpacity>
+      </View>
+
+      <AddressSelectionModal
+        visible={addressModalVisible}
+        onClose={() => setAddressModalVisible(false)}
+        onSelectAddress={handleAddressSelect}
+        selectedAddress={addresses[selectedAddress]}
+      />
     </SafeAreaView>
   );
 };
@@ -228,7 +445,7 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f0fdf4',
   },
   header: {
     flexDirection: 'row',
@@ -242,6 +459,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    paddingVertical: 8,
+  },
+  dropdownIcon: {
+    marginLeft: 8,
+  },
+  dropdownIconText: {
+    fontSize: 12,
+    color: '#64748b',
   },
   locationIcon: {
     width: 32,
@@ -278,16 +503,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    width: 40,
+    minWidth: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    paddingHorizontal: 8,
   },
   actionIcon: {
     fontSize: 18,
+  },
+  walletBalance: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginTop: 2,
   },
   notificationBadge: {
     position: 'absolute',
@@ -324,8 +556,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1e293b',
   },
-  micIcon: {
-    fontSize: 18,
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  filterTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginRight: 12,
+  },
+  filterScroll: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterButton: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  filterText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
   content: {
     flex: 1,
@@ -515,6 +774,76 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  offerItem: {
+    width: 150,
+    height: 80,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  offerItemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  offerItemSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    paddingVertical: 8,
+    paddingBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconContainer: {
+    position: 'relative',
+    marginBottom: 2,
+  },
+  navIcon: {
+    fontSize: 20,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  navText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
 

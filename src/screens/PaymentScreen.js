@@ -16,7 +16,7 @@ import api from '../services/api';
 const PaymentScreen = ({ navigation, route }) => {
   const { cart } = route.params || {};
   const [cartItems, setCartItems] = useState(cart || []);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('card');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi');
   const [cardDetails, setCardDetails] = useState({
     number: '',
     expiry: '',
@@ -27,7 +27,6 @@ const PaymentScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
 
   const paymentMethods = [
-    { id: 'card', name: 'Credit/Debit Card', icon: '💳' },
     { id: 'upi', name: 'UPI', icon: '📱' },
     { id: 'wallet', name: 'Digital Wallet', icon: '👛' },
     { id: 'cod', name: 'Cash on Delivery', icon: '💵' },
@@ -60,11 +59,6 @@ const PaymentScreen = ({ navigation, route }) => {
   const getGrandTotal = () => getTotalPrice() + getDeliveryFee() + getGST();
 
   const handlePayment = async () => {
-    if (selectedPaymentMethod === 'card' && (!cardDetails.number || !cardDetails.expiry || !cardDetails.cvv || !cardDetails.name)) {
-      Alert.alert('Missing Information', 'Please fill in all card details');
-      return;
-    }
-
     if (selectedPaymentMethod === 'upi' && !cardDetails.number) {
       Alert.alert('Missing Information', 'Please enter UPI ID');
       return;
@@ -276,7 +270,6 @@ const PaymentScreen = ({ navigation, route }) => {
           {paymentMethods.map(renderPaymentMethod)}
 
           {/* Payment Forms */}
-          {selectedPaymentMethod === 'card' && renderCardForm()}
           {selectedPaymentMethod === 'upi' && renderUPIForm()}
         </View>
 
