@@ -51,7 +51,18 @@ const PaymentScreen = ({ navigation, route }) => {
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    // Handle both multi-restaurant structure and flat array
+    if (cartItems.length > 0 && cartItems[0].restaurantId) {
+      // Multi-restaurant structure
+      return cartItems.reduce((total, restaurant) => {
+        return total + restaurant.items.reduce((restaurantTotal, item) => {
+          return restaurantTotal + (item.price * item.quantity);
+        }, 0);
+      }, 0);
+    } else {
+      // Flat array structure
+      return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    }
   };
 
   const getDeliveryFee = () => 40;
@@ -214,15 +225,36 @@ const PaymentScreen = ({ navigation, route }) => {
         {/* Order Summary */}
         <View style={styles.orderSummary}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
-          {cartItems.map((item, index) => (
-            <View key={index} style={styles.orderItem}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+          
+          {/* Handle both multi-restaurant and flat cart structures */}
+          {cartItems.length > 0 && cartItems[0].restaurantId ? (
+            // Multi-restaurant structure
+            cartItems.map((restaurant, restaurantIndex) => (
+              <View key={restaurantIndex} style={styles.restaurantSection}>
+                <Text style={styles.restaurantName}>{restaurant.restaurantName}</Text>
+                {restaurant.items.map((item, itemIndex) => (
+                  <View key={itemIndex} style={styles.orderItem}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+                    </View>
+                    <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+                  </View>
+                ))}
               </View>
-              <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
-            </View>
-          ))}
+            ))
+          ) : (
+            // Flat array structure
+            cartItems.map((item, index) => (
+              <View key={index} style={styles.orderItem}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+                </View>
+                <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+              </View>
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -506,6 +538,18 @@ const styles = StyleSheet.create({
   },
   halfInput: {
     flex: 0.48,
+  },
+  restaurantSection: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 8,
   },
   checkoutContainer: {
     backgroundColor: '#ffffff',

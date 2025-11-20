@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
   Image,
   RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -56,8 +56,19 @@ const CartScreen = ({ navigation }) => {
 
     try {
       const response = await api.updateCartItem(restaurantId, itemId, newQuantity);
-      if (response.success) {
+      if (response.success && response.cart) {
+        // Update cart state with the new cart data
         setCart(response.cart);
+        
+        // Update selected restaurants based on new cart
+        const updatedRestaurants = new Set(response.cart.items.map(group => group.restaurantId));
+        setSelectedRestaurants(prevSelected => {
+          // Remove restaurants that are no longer in cart
+          const validRestaurants = new Set([...prevSelected].filter(id => updatedRestaurants.has(id)));
+          // Add all restaurants from updated cart
+          updatedRestaurants.forEach(id => validRestaurants.add(id));
+          return validRestaurants;
+        });
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update item quantity');
@@ -67,8 +78,19 @@ const CartScreen = ({ navigation }) => {
   const removeItem = async (restaurantId, itemId) => {
     try {
       const response = await api.removeFromCart(restaurantId, itemId);
-      if (response.success) {
+      if (response.success && response.cart) {
+        // Update cart state with the new cart data
         setCart(response.cart);
+        
+        // Update selected restaurants based on new cart
+        const updatedRestaurants = new Set(response.cart.items.map(group => group.restaurantId));
+        setSelectedRestaurants(prevSelected => {
+          // Remove restaurants that are no longer in cart
+          const validRestaurants = new Set([...prevSelected].filter(id => updatedRestaurants.has(id)));
+          // Add all restaurants from updated cart
+          updatedRestaurants.forEach(id => validRestaurants.add(id));
+          return validRestaurants;
+        });
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to remove item');
@@ -78,8 +100,11 @@ const CartScreen = ({ navigation }) => {
   const clearRestaurantCart = async (restaurantId) => {
     try {
       const response = await api.clearRestaurantCart(restaurantId);
-      if (response.success) {
+      if (response.success && response.cart) {
+        // Update cart state with the new cart data
         setCart(response.cart);
+        
+        // Update selected restaurants - remove the cleared restaurant
         const newSelected = new Set(selectedRestaurants);
         newSelected.delete(restaurantId);
         setSelectedRestaurants(newSelected);
@@ -92,7 +117,8 @@ const CartScreen = ({ navigation }) => {
   const applyCoupon = async (restaurantId, code) => {
     try {
       const response = await api.applyCoupon(restaurantId, code);
-      if (response.success) {
+      if (response.success && response.cart) {
+        // Update cart state with the new cart data
         setCart(response.cart);
         Alert.alert('Success', 'Coupon applied successfully!');
         setCouponCode('');
@@ -136,7 +162,12 @@ const CartScreen = ({ navigation }) => {
             try {
               const response = await api.clearCart();
               if (response.success) {
-                setCart({ items: [] });
+                // Reset cart state to empty cart structure
+                setCart({
+                  items: [],
+                  globalCoupon: null,
+                  deliveryAddress: null
+                });
                 setSelectedRestaurants(new Set());
               }
             } catch (error) {
@@ -361,34 +392,6 @@ const CartScreen = ({ navigation }) => {
         </View>
       ) : (
         <>
-          {/* Global Coupon Section */}
-          <View style={styles.globalCouponSection}>
-            <TouchableOpacity
-              style={styles.couponButton}
-              onPress={() => setShowCouponInput(!showCouponInput)}
-            >
-              <Text style={styles.couponButtonText}>
-                {cart.globalCoupon ? `Global Coupon: ${cart.globalCoupon.code}` : 'Apply Global Coupon'}
-              </Text>
-            </TouchableOpacity>
-            {showCouponInput && (
-              <View style={styles.couponInputContainer}>
-                <TextInput
-                  style={styles.couponInput}
-                  placeholder="Enter coupon code"
-                  value={couponCode}
-                  onChangeText={setCouponCode}
-                />
-                <TouchableOpacity
-                  style={styles.applyCouponButton}
-                  onPress={() => applyCoupon(null, couponCode)}
-                >
-                  <Text style={styles.applyCouponText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-
           <ScrollView
             style={styles.cartList}
             showsVerticalScrollIndicator={false}
@@ -396,33 +399,47 @@ const CartScreen = ({ navigation }) => {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {cart.items && cart.items.map((restaurantGroup, index) => (
-              <View key={restaurantGroup.restaurantId || index}>
+            {/* Restaurant Count Header */}
+            {cart.items.length > 1 && (
+              <View style={styles.restaurantCountHeader}>
+                <Text style={styles.restaurantCountText}>
+                  {cart.items.length} restaurants • {getTotalItems()} items
+                </Text>
+              </View>
+            )}
+
+            {cart.items && cart.items.map((restaurantGroup) => (
+              <View key={`restaurant-${restaurantGroup.restaurantId}`}>
                 {renderRestaurantSection(restaurantGroup)}
               </View>
             ))}
-          </ScrollView>
 
-          {/* Global Coupon Section at Bottom */}
-          <View style={styles.bottomCouponSection}>
-            <View style={styles.couponInputContainer}>
-              <TextInput
-                style={styles.couponInput}
-                placeholder="Enter coupon code"
-                value={couponCode}
-                onChangeText={setCouponCode}
-              />
-              <TouchableOpacity
-                style={styles.applyCouponButton}
-                onPress={() => applyCoupon(null, couponCode)}
-              >
-                <Text style={styles.applyCouponText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-            {cart.globalCoupon && (
-              <Text style={styles.appliedGlobalCoupon}>Applied: {cart.globalCoupon.code} (-{cart.globalCoupon.discount}%)</Text>
+            {/* Global Coupon Section - Positioned within scroll */}
+            {selectedRestaurants.size > 0 && (
+              <View style={styles.globalCouponSectionFixed}>
+                <Text style={styles.couponSectionTitle}>Apply Global Coupon</Text>
+                <View style={styles.couponInputContainer}>
+                  <TextInput
+                    style={styles.couponInput}
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChangeText={setCouponCode}
+                  />
+                  <TouchableOpacity
+                    style={styles.applyCouponButton}
+                    onPress={() => applyCoupon(null, couponCode)}
+                  >
+                    <Text style={styles.applyCouponText}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+                {cart.globalCoupon && (
+                  <Text style={styles.appliedGlobalCoupon}>
+                    Applied: {cart.globalCoupon.code} (-{cart.globalCoupon.discount}%)
+                  </Text>
+                )}
+              </View>
             )}
-          </View>
+          </ScrollView>
 
           {/* Global Cart Summary */}
           {selectedRestaurants.size > 0 && (
@@ -714,6 +731,157 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  restaurantCountHeader: {
+    backgroundColor: '#e0f2fe',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  restaurantCountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0369a1',
+    textAlign: 'center',
+  },
+  globalCouponSectionFixed: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  couponSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  couponInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  couponInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 8,
+    fontSize: 14,
+  },
+  applyCouponButton: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  applyCouponText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  appliedGlobalCoupon: {
+    fontSize: 14,
+    color: '#22c55e',
+    fontWeight: '600',
+  },
+  // Restaurant specific styles
+  restaurantSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  restaurantHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#cbd5e1',
+    borderRadius: 4,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#22c55e',
+    borderColor: '#22c55e',
+  },
+  checkboxText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  restaurantInfo: {
+    flex: 1,
+  },
+  restaurantName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  deliveryInfo: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  clearText: {
+    fontSize: 14,
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  itemsContainer: {
+    padding: 16,
+  },
+  restaurantSummary: {
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  globalSummary: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  specialInstructionsText: {
+    fontSize: 12,
+    color: '#f59e0b',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  discountText: {
+    color: '#22c55e',
   },
 });
 

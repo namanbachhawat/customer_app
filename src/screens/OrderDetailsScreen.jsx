@@ -33,19 +33,27 @@ const OrderDetailsScreen = ({ route, navigation }) => {
 
         <View style={styles.itemsCard}>
           <Text style={styles.sectionTitle}>Items Ordered</Text>
-          {order.items && order.items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <Text style={styles.itemName}>{item.name || 'Unknown Item'}</Text>
-              <Text style={styles.itemDetails}>Qty: {item.quantity || 0} × ₹{item.price || 0}</Text>
-              <Text style={styles.itemTotal}>₹{(item.quantity || 0) * (item.price || 0)}</Text>
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item, index) => (
+              <View key={index} style={styles.itemRow}>
+                <Text style={styles.itemName}>{item.name || item.itemName || item.title || 'Menu Item'}</Text>
+                <Text style={styles.itemDetails}>Qty: {item.quantity || 0} × ₹{item.price || 0}</Text>
+                <Text style={styles.itemTotal}>₹{((item.quantity || 0) * (item.price || 0)).toFixed(2)}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.itemRow}>
+              <Text style={styles.itemName}>No items found</Text>
+              <Text style={styles.itemDetails}>Items not available</Text>
+              <Text style={styles.itemTotal}>₹0</Text>
             </View>
-          ))}
+          )}
         </View>
 
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal:</Text>
-            <Text style={styles.summaryValue}>₹{(order.total || 0) - 40 - ((order.total || 0) * 0.05)}</Text>
+            <Text style={styles.summaryValue}>₹{Math.max(0, ((order.total || 0) - 40 - ((order.total || 0) * 0.05))).toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Delivery Fee:</Text>
@@ -57,7 +65,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
           </View>
           <View style={[styles.summaryRow, styles.totalRow]}>
             <Text style={styles.totalLabel}>Total:</Text>
-            <Text style={styles.totalValue}>₹{order.total || 0}</Text>
+            <Text style={styles.totalValue}>₹{(order.total || 0).toFixed(2)}</Text>
           </View>
         </View>
 

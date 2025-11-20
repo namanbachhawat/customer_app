@@ -37,12 +37,15 @@ const VendorScreen = ({ navigation, route }) => {
 
   const addToCart = async (item) => {
     try {
-      const response = await api.addToCart({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        vendorId: vendorData.id,
-      });
+      const response = await api.addToCart(
+        {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+        },
+        vendorData.id,
+        vendorData.name
+      );
       if (response.success) {
         Alert.alert('Success', `${item.name} added to cart!`);
       }

@@ -34,6 +34,15 @@ const HomeScreen = ({ navigation }) => {
     loadWallet();
   }, []);
 
+  // Add focus listener to refresh cart when returning to home
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadCart(); // Refresh cart when screen comes into focus
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const loadHomeData = async () => {
     try {
       const [categoriesResponse, vendorsResponse, addressesResponse, notificationsResponse] = await Promise.all([
@@ -352,34 +361,36 @@ const HomeScreen = ({ navigation }) => {
            </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {[
-              { id: 1, name: 'Masala Chai', price: 25, vendorId: 1 },
-              { id: 2, name: 'Samosa', price: 20, vendorId: 1 },
-              { id: 3, name: 'Filter Coffee', price: 30, vendorId: 1 },
-              { id: 4, name: 'Dhokla', price: 40, vendorId: 2 }
+              { id: 1, name: 'Masala Chai', price: 25, vendorId: 1, restaurantName: 'Green Tea House' },
+              { id: 2, name: 'Samosa', price: 20, vendorId: 1, restaurantName: 'Green Tea House' },
+              { id: 3, name: 'Filter Coffee', price: 30, vendorId: 1, restaurantName: 'Green Tea House' },
+              { id: 4, name: 'Dhokla', price: 40, vendorId: 2, restaurantName: 'Herbal Garden Cafe' },
+              { id: 7, name: 'Dhokla', price: 40, vendorId: 3, restaurantName: 'Pure Veg Corner' },
+              { id: 19, name: 'Chocolate Cake', price: 80, vendorId: 5, restaurantName: 'Sweet Dreams Bakery' }
             ].map((item) => (
               <View key={item.id} style={styles.orderAgainItem}>
                 <Image source={{ uri: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47?w=100' }} style={styles.orderAgainImage} />
                 <Text style={styles.orderAgainName}>{item.name}</Text>
-                <Text style={styles.orderAgainVendor}>Green Tea House</Text>
+                <Text style={styles.orderAgainVendor}>{item.restaurantName}</Text>
                 <Text style={styles.orderAgainPrice}>₹{item.price}</Text>
                 {getItemQuantity(item.id) > 0 ? (
                   <View style={styles.quantityControls}>
                     <TouchableOpacity
                       style={styles.quantityButton}
-                      onPress={() => handleUpdateCartItem(1, item.id, getItemQuantity(item.id) - 1)}
+                      onPress={() => handleUpdateCartItem(item.vendorId, item.id, getItemQuantity(item.id) - 1)}
                     >
                       <Text style={styles.quantityButtonText}>-</Text>
                     </TouchableOpacity>
                     <Text style={styles.quantityText}>{getItemQuantity(item.id)}</Text>
                     <TouchableOpacity
                       style={styles.quantityButton}
-                      onPress={() => handleUpdateCartItem(1, item.id, getItemQuantity(item.id) + 1)}
+                      onPress={() => handleUpdateCartItem(item.vendorId, item.id, getItemQuantity(item.id) + 1)}
                     >
                       <Text style={styles.quantityButtonText}>+</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <Button title="Add" size="small" style={styles.addButton} onPress={() => handleAddToCart(item, 1, 'Green Tea House')} />
+                  <Button title="Add" size="small" style={styles.addButton} onPress={() => handleAddToCart(item, item.vendorId, item.restaurantName)} />
                 )}
               </View>
             ))}
@@ -844,6 +855,36 @@ const styles = StyleSheet.create({
   navText: {
     fontSize: 10,
     fontWeight: '600',
+  },
+  // Add missing styles for quantity controls
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  quantityButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#64748b',
+  },
+  quantityText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    minWidth: 20,
+    textAlign: 'center',
   },
 });
 

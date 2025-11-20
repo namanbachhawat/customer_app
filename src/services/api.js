@@ -457,7 +457,11 @@ class ApiService {
     };
     this.mockData.orders.unshift(newOrder);
     // Clear cart after successful order
-    this.mockData.cart = [];
+    this.mockData.cart = {
+      items: [],
+      globalCoupon: null,
+      deliveryAddress: null
+    };
     return { success: true, order: newOrder };
   }
 
