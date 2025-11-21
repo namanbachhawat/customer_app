@@ -602,13 +602,13 @@ class ApiService {
     let results = [];
 
     // Search in vendors
-    const vendorResults = this.mockData.vendors.filter(vendor =>
+    let vendorResults = this.mockData.vendors.filter(vendor =>
       vendor.name.toLowerCase().includes(query?.toLowerCase() || '') ||
       vendor.menu.some(item => item.name.toLowerCase().includes(query?.toLowerCase() || ''))
     );
 
     // Search in menu items
-    const menuResults = [];
+    let menuResults = [];
     this.mockData.vendors.forEach(vendor => {
       vendor.menu.forEach(item => {
         if (item.name.toLowerCase().includes(query?.toLowerCase() || '')) {
@@ -616,6 +616,21 @@ class ApiService {
         }
       });
     });
+
+    // Apply category filter if present
+    if (category && category !== 'all') {
+      const categoryLower = category.toLowerCase();
+
+      // Filter vendors: keep if they have items in this category
+      vendorResults = vendorResults.filter(vendor =>
+        vendor.menu.some(item => item.category.toLowerCase() === categoryLower)
+      );
+
+      // Filter menu items: keep if they match the category
+      menuResults = menuResults.filter(item =>
+        item.category.toLowerCase() === categoryLower
+      );
+    }
 
     return {
       success: true,

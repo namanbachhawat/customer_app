@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -27,9 +28,9 @@ const PaymentScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
 
   const paymentMethods = [
-    { id: 'upi', name: 'UPI', icon: '📱' },
-    { id: 'wallet', name: 'Digital Wallet', icon: '👛' },
-    { id: 'cod', name: 'Cash on Delivery', icon: '💵' },
+    { id: 'upi', name: 'UPI', icon: 'phone-portrait-outline' },
+    { id: 'wallet', name: 'Digital Wallet', icon: 'wallet-outline' },
+    { id: 'cod', name: 'Cash on Delivery', icon: 'cash-outline' },
   ];
 
   useEffect(() => {
@@ -88,27 +89,65 @@ const PaymentScreen = ({ navigation, route }) => {
       const response = await api.processPayment(paymentData);
 
       if (response.success) {
-        // Place the order
-        const orderData = {
-          vendorName: 'Green Tea House', // This should be dynamic based on cart
-          total: getGrandTotal(),
-          items: cartItems.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        };
+        const placedOrders = [];
+        let errors = [];
 
-        const orderResponse = await api.placeOrder(orderData);
+        // Handle multi-restaurant structure
+        if (cartItems.length > 0 && cartItems[0].restaurantId) {
+          for (const restaurantGroup of cartItems) {
+            const subtotal = restaurantGroup.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryFee = restaurantGroup.deliveryFee || 40; // Use group fee or default
+            const gst = subtotal * 0.05;
+            const total = subtotal + deliveryFee + gst;
 
-        if (orderResponse.success) {
+            const orderData = {
+              vendorName: restaurantGroup.restaurantName,
+              total: total,
+              items: restaurantGroup.items.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+            };
+
+            const orderResponse = await api.placeOrder(orderData);
+            if (orderResponse.success) {
+              placedOrders.push(orderResponse.order);
+            } else {
+              errors.push(`Failed to place order for ${restaurantGroup.restaurantName}`);
+            }
+          }
+        } else {
+          // Fallback for flat structure (legacy support)
+          const orderData = {
+            vendorName: 'Green Tea House',
+            total: getGrandTotal(),
+            items: cartItems.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+            })),
+          };
+          const orderResponse = await api.placeOrder(orderData);
+          if (orderResponse.success) {
+            placedOrders.push(orderResponse.order);
+          } else {
+            errors.push('Failed to place order');
+          }
+        }
+
+        if (placedOrders.length > 0) {
+          const message = placedOrders.length > 1
+            ? `Successfully placed ${placedOrders.length} orders!`
+            : `Your order has been placed successfully.\nOrder ID: ${placedOrders[0].orderId}`;
+
           Alert.alert(
             'Payment Successful!',
-            `Your order has been placed successfully.\nOrder ID: ${orderResponse.order.orderId}`,
+            message,
             [
               {
-                text: 'View Order',
-                onPress: () => navigation.navigate('Tracking', { order: orderResponse.order }),
+                text: 'View Orders',
+                onPress: () => navigation.navigate('Orders'),
               },
               {
                 text: 'Back to Home',
@@ -118,12 +157,13 @@ const PaymentScreen = ({ navigation, route }) => {
             ]
           );
         } else {
-          Alert.alert('Error', 'Order placement failed. Please contact support.');
+          Alert.alert('Error', 'Order placement failed. ' + errors.join('\n'));
         }
       } else {
         Alert.alert('Payment Failed', response.error || 'Please try again or choose a different payment method.');
       }
     } catch (error) {
+      console.error(error);
       Alert.alert('Error', 'Payment processing failed. Please try again.');
     } finally {
       setLoading(false);
@@ -134,20 +174,23 @@ const PaymentScreen = ({ navigation, route }) => {
     <TouchableOpacity
       key={method.id}
       style={[
-        styles.paymentMethod,
+        styles.paymentMethodCard,
         selectedPaymentMethod === method.id && styles.selectedPaymentMethod,
       ]}
       onPress={() => setSelectedPaymentMethod(method.id)}
     >
-      <View style={styles.methodContent}>
-        <Text style={styles.methodIcon}>{method.icon}</Text>
-        <Text style={[
-          styles.methodName,
-          selectedPaymentMethod === method.id && styles.selectedMethodText,
-        ]}>
-          {method.name}
-        </Text>
-      </View>
+      <Ionicons
+        name={method.icon}
+        size={24}
+        color={selectedPaymentMethod === method.id ? '#22c55e' : '#64748b'}
+        style={{ marginRight: 12 }}
+      />
+      <Text style={[
+        styles.methodName,
+        selectedPaymentMethod === method.id && styles.selectedMethodText,
+      ]}>
+        {method.name}
+      </Text>
       <View style={[
         styles.radioButton,
         selectedPaymentMethod === method.id && styles.selectedRadioButton,
@@ -163,7 +206,7 @@ const PaymentScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Card Number"
         value={cardDetails.number}
-        onChangeText={(text) => setCardDetails({...cardDetails, number: text})}
+        onChangeText={(text) => setCardDetails({ ...cardDetails, number: text })}
         keyboardType="numeric"
         placeholderTextColor="#64748b"
       />
@@ -172,14 +215,14 @@ const PaymentScreen = ({ navigation, route }) => {
           style={[styles.input, styles.halfInput]}
           placeholder="MM/YY"
           value={cardDetails.expiry}
-          onChangeText={(text) => setCardDetails({...cardDetails, expiry: text})}
+          onChangeText={(text) => setCardDetails({ ...cardDetails, expiry: text })}
           placeholderTextColor="#64748b"
         />
         <TextInput
           style={[styles.input, styles.halfInput]}
           placeholder="CVV"
           value={cardDetails.cvv}
-          onChangeText={(text) => setCardDetails({...cardDetails, cvv: text})}
+          onChangeText={(text) => setCardDetails({ ...cardDetails, cvv: text })}
           keyboardType="numeric"
           secureTextEntry
           placeholderTextColor="#64748b"
@@ -189,7 +232,7 @@ const PaymentScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Cardholder Name"
         value={cardDetails.name}
-        onChangeText={(text) => setCardDetails({...cardDetails, name: text})}
+        onChangeText={(text) => setCardDetails({ ...cardDetails, name: text })}
         placeholderTextColor="#64748b"
       />
     </View>
@@ -201,7 +244,7 @@ const PaymentScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter UPI ID (e.g., user@paytm)"
         value={cardDetails.number}
-        onChangeText={(text) => setCardDetails({...cardDetails, number: text})}
+        onChangeText={(text) => setCardDetails({ ...cardDetails, number: text })}
         placeholderTextColor="#64748b"
       />
     </View>
@@ -215,7 +258,7 @@ const PaymentScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={{ width: 40 }} />
@@ -225,7 +268,7 @@ const PaymentScreen = ({ navigation, route }) => {
         {/* Order Summary */}
         <View style={styles.orderSummary}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
-          
+
           {/* Handle both multi-restaurant and flat cart structures */}
           {cartItems.length > 0 && cartItems[0].restaurantId ? (
             // Multi-restaurant structure
@@ -283,7 +326,7 @@ const PaymentScreen = ({ navigation, route }) => {
           <Card style={styles.addressCard}>
             <CardContent>
               <View style={styles.addressContent}>
-                <Text style={styles.addressIcon}>📍</Text>
+                <Ionicons name="location-outline" size={20} color="#64748b" style={{ marginRight: 12 }} />
                 <View style={styles.addressInfo}>
                   <Text style={styles.addressName}>{deliveryAddress.split(' - ')[0]}</Text>
                   <Text style={styles.addressDetail}>{deliveryAddress.split(' - ')[1]}</Text>

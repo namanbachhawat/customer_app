@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
   Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -18,11 +19,32 @@ const VendorScreen = ({ navigation, route }) => {
   const [vendorData, setVendorData] = useState(vendor || null);
   const [menu, setMenu] = useState([]);
 
+  const [cartItems, setCartItems] = useState([]);
+
   useEffect(() => {
     if (vendor) {
       loadVendorMenu(vendor.id);
     }
   }, [vendor]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadCart();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadCart = async () => {
+    try {
+      const response = await api.getCart();
+      if (response.success) {
+        // Create a new array reference to ensure React re-renders
+        setCartItems([...response.cart.items]);
+      }
+    } catch (error) {
+      console.error('Failed to load cart', error);
+    }
+  };
 
   const loadVendorMenu = async (vendorId) => {
     try {
@@ -35,46 +57,108 @@ const VendorScreen = ({ navigation, route }) => {
     }
   };
 
-  const addToCart = async (item) => {
-    try {
-      const response = await api.addToCart(
-        {
-          id: item.id,
-          name: item.name,
-          price: item.price,
-        },
-        vendorData.id,
-        vendorData.name
-      );
-      if (response.success) {
-        Alert.alert('Success', `${item.name} added to cart!`);
+  const getQuantity = (itemId) => {
+    if (!vendorData) return 0;
+    const restaurantGroup = cartItems.find(group => group.restaurantId === vendorData.id);
+    if (!restaurantGroup) return 0;
+    const item = restaurantGroup.items.find(i => i.id === itemId);
+    return item ? item.quantity : 0;
+  };
+
+  const handleIncrement = async (item) => {
+    const currentQty = getQuantity(item.id);
+    if (currentQty === 0) {
+      try {
+        const response = await api.addToCart(
+          {
+            id: item.id,
+            name: item.name,
+            price: item.price,
+          },
+          vendorData.id,
+          vendorData.name
+        );
+        if (response.success) {
+          loadCart();
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to add item');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item to cart');
+    } else {
+      try {
+        const response = await api.updateCartItem(vendorData.id, item.id, currentQty + 1);
+        if (response.success) {
+          loadCart();
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
+      }
     }
   };
 
-  const renderMenuItem = (item) => (
-    <Card key={item.id} style={styles.menuItem}>
-      <View style={styles.itemContent}>
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47?w=100' }}
-          style={styles.itemImage}
-        />
-        <CardContent style={styles.itemDetails}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemCategory}>{item.category}</Text>
-          <Text style={styles.itemPrice}>₹{item.price}</Text>
-        </CardContent>
-        <Button
-          title="Add"
-          onPress={() => addToCart(item)}
-          size="small"
-          style={styles.addButton}
-        />
-      </View>
-    </Card>
-  );
+  const handleDecrement = async (item) => {
+    const currentQty = getQuantity(item.id);
+    if (currentQty > 0) {
+      try {
+        // If quantity becomes 0, updateCartItem handles removal or we can call removeFromCart
+        // Assuming updateCartItem(id, 0) removes it or handles it correctly based on API mock
+        const response = currentQty === 1
+          ? await api.removeFromCart(vendorData.id, item.id)
+          : await api.updateCartItem(vendorData.id, item.id, currentQty - 1);
+
+        if (response.success) {
+          loadCart();
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    }
+  };
+
+  const renderMenuItem = (item) => {
+    const quantity = getQuantity(item.id);
+
+    return (
+      <Card key={item.id} style={styles.menuItem}>
+        <View style={styles.itemContent}>
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1648192312898-838f9b322f47?w=100' }}
+            style={styles.itemImage}
+          />
+          <CardContent style={styles.itemDetails}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemCategory}>{item.category}</Text>
+            <Text style={styles.itemPrice}>₹{item.price}</Text>
+          </CardContent>
+
+          {quantity === 0 ? (
+            <Button
+              title="Add"
+              onPress={() => handleIncrement(item)}
+              size="small"
+              style={styles.addButton}
+            />
+          ) : (
+            <View style={styles.quantityContainer}>
+              <TouchableOpacity
+                style={styles.qtyButton}
+                onPress={() => handleDecrement(item)}
+              >
+                <Text style={styles.qtyButtonText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.qtyText}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.qtyButton}
+                onPress={() => handleIncrement(item)}
+              >
+                <Text style={styles.qtyButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Card>
+    );
+  };
 
   if (!vendorData) {
     return (
@@ -99,17 +183,20 @@ const VendorScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle} numberOfLines={1}>{vendorData.name}</Text>
-          <Text style={styles.headerSubtitle}>⭐ {vendorData.rating} • {vendorData.time}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="star" size={14} color="#fbbf24" style={{ marginRight: 4 }} />
+            <Text style={styles.headerSubtitle}>{vendorData.rating} • {vendorData.time}</Text>
+          </View>
         </View>
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Ionicons name="cart-outline" size={24} color="#64748b" />
         </TouchableOpacity>
       </View>
 
@@ -119,9 +206,10 @@ const VendorScreen = ({ navigation, route }) => {
           <Image source={{ uri: vendorData.image }} style={styles.vendorImage} />
           <View style={styles.vendorDetails}>
             <Text style={styles.vendorName}>{vendorData.name}</Text>
-            <Text style={styles.vendorMeta}>
-              ⭐ {vendorData.rating} • {vendorData.time} • {vendorData.distance}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Ionicons name="star" size={14} color="#fbbf24" style={{ marginRight: 4 }} />
+              <Text style={styles.vendorMeta}>{vendorData.rating} • {vendorData.time} • {vendorData.distance}</Text>
+            </View>
             <Text style={styles.vendorOffers}>{vendorData.offers}</Text>
             <Text style={styles.vendorPrice}>{vendorData.price}</Text>
             <Text style={styles.vendorDescription}>{vendorData.description}</Text>
@@ -307,6 +395,30 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#22c55e',
+  },
+  qtyButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  qtyButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#16a34a',
+  },
+  qtyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    minWidth: 20,
+    textAlign: 'center',
   },
 });
 

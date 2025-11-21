@@ -1,13 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
 
@@ -44,11 +37,11 @@ const NotificationsScreen = ({ navigation }) => {
       // Assuming there's an API to mark notification as read
       // const response = await api.markNotificationAsRead(notificationId);
       // if (response.success) {
-        setNotifications(prev =>
-          prev.map(notif =>
-            notif.id === notificationId ? { ...notif, read: true } : notif
-          )
-        );
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
       // }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
@@ -87,7 +80,7 @@ const NotificationsScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={styles.headerRight} />
@@ -101,7 +94,7 @@ const NotificationsScreen = ({ navigation }) => {
       >
         {notifications.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔔</Text>
+            <Ionicons name="notifications-off-outline" size={64} color="#cbd5e1" />
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptySubtitle}>
               We'll notify you when there are updates on your orders and offers

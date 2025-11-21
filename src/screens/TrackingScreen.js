@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import AppTheme from '../theme';
 
 // Mock MapView component for development - replace with actual react-native-maps when available
 const MapView = ({ children, style, initialRegion }) => (
-  <View style={[style, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-    <Text style={{ color: '#666', fontSize: 14 }}>🗺️ Map View</Text>
+  <TouchableOpacity style={[style, { backgroundColor: '#f0f9ff', justifyContent: 'center', alignItems: 'center', padding: 12, borderRadius: 8, marginBottom: 16 }]}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Ionicons name="map-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
+        <Text style={{ color: '#666', fontSize: 14 }}>Map View</Text>
+      </View>
+    </View>
     <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>Install react-native-maps for full functionality</Text>
     {children}
-  </View>
+  </TouchableOpacity>
 );
 
 const Marker = ({ title, description }) => (
-  <View style={{ position: 'absolute', top: 10, left: 10 }}>
-    <Text style={{ fontSize: 12, color: '#333' }}>📍 {title}</Text>
+  <View style={{ position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+    <Ionicons name="location" size={12} color="#666" style={{ marginRight: 4 }} />
+    <Text style={{ fontSize: 12, color: '#333' }}>{title}</Text>
   </View>
 );
 
-const TrackingScreen = () => {
-  const [orderStatus, setOrderStatus] = useState('preparing');
+const TrackingScreen = ({ route, navigation }) => {
+  const { order } = route.params || {};
+  const [orderStatus, setOrderStatus] = useState(order?.status?.toLowerCase() || 'preparing');
 
   // Mock locations for demo
   const shopLocation = {
@@ -38,6 +46,8 @@ const TrackingScreen = () => {
   const customerLocation = {
     latitude: 19.0780,
     longitude: 72.8790,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
   };
 
   const getStatusColor = (status) => {
@@ -57,20 +67,20 @@ const TrackingScreen = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
+  const getStatusIcon = (statusId) => {
+    switch (statusId) {
       case 'confirmed':
-        return '✓';
+        return <Ionicons name="checkmark-circle" size={20} color="#22c55e" />;
       case 'preparing':
-        return '👨‍🍳';
+        return <Ionicons name="restaurant-outline" size={20} color="#64748b" />;
       case 'ready':
-        return '🍽️';
+        return <Ionicons name="fast-food-outline" size={20} color="#64748b" />;
       case 'picked_up':
-        return '🚗';
+        return <Ionicons name="bicycle-outline" size={20} color="#64748b" />;
       case 'delivered':
-        return '🏠';
+        return <Ionicons name="home-outline" size={20} color="#64748b" />;
       default:
-        return '○';
+        return <Ionicons name="radio-button-off" size={20} color="#cbd5e1" />;
     }
   };
 
@@ -84,20 +94,39 @@ const TrackingScreen = () => {
 
   const currentStepIndex = trackingSteps.findIndex(step => step.id === orderStatus);
 
+  if (!order) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 10 }}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Order Tracking</Text>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>No order details available.</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', left: 20, top: 65, zIndex: 1 }}>
+            <Ionicons name="arrow-back" size={28} color="white" />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>Order Tracking</Text>
-          <Text style={styles.headerSubtitle}>Order #12345</Text>
+          <Text style={styles.headerSubtitle}>Order #{order.id}</Text>
         </View>
 
         {/* Restaurant Info */}
         <View style={styles.restaurantCard}>
           <View style={styles.restaurantInfo}>
             <View>
-              <Text style={styles.restaurantName}>Green Garden Restaurant</Text>
+              <Text style={styles.restaurantName}>{order.vendorName || 'Restaurant'}</Text>
               <Text style={styles.restaurantAddress}>123 Food Street, City Center</Text>
             </View>
             <View style={styles.driverInfo}>
@@ -124,10 +153,8 @@ const TrackingScreen = () => {
           <View style={styles.progressContainer}>
             {trackingSteps.map((step, index) => (
               <View key={step.id} style={styles.progressStep}>
-                <View style={[styles.progressIcon, { backgroundColor: index <= currentStepIndex ? getStatusColor(step.id) : '#e5e7eb' }]}>
-                  <Text style={styles.progressIconText}>
-                    {index <= currentStepIndex ? getStatusIcon(step.id) : '○'}
-                  </Text>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: index <= currentStepIndex ? '#22c55e' : '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
+                  {getStatusIcon(step.id)}
                 </View>
                 {index < trackingSteps.length - 1 && (
                   <View style={[styles.progressLine, { backgroundColor: index < currentStepIndex ? getStatusColor(step.id) : '#e5e7eb' }]} />
@@ -156,7 +183,7 @@ const TrackingScreen = () => {
             >
               <Marker
                 coordinate={shopLocation}
-                title="Green Garden Restaurant"
+                title={order.vendorName || "Restaurant"}
                 description="Your order is being prepared here"
                 pinColor="green"
               />
@@ -181,7 +208,7 @@ const TrackingScreen = () => {
           <View style={styles.statusHeader}>
             <Text style={styles.statusTitle}>Current Status</Text>
             <Text style={[styles.statusText, { color: getStatusColor(orderStatus) }]}>
-              {trackingSteps[currentStepIndex]?.label}
+              {trackingSteps[currentStepIndex]?.label || order.status}
             </Text>
           </View>
           <Text style={styles.statusDescription}>

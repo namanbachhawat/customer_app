@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, CardContent } from '../components/Card';
 
 const OrderDetailsScreen = ({ route, navigation }) => {
   const { order } = route.params;
@@ -13,7 +12,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Order Details</Text>
         <View style={styles.headerRight} />
@@ -25,7 +24,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
           <Text style={styles.orderDate}>{order.date}</Text>
           <Text style={[styles.orderStatus, {
             color: order.status === 'Delivered' ? '#22c55e' :
-                   order.status === 'Preparing' ? '#f59e0b' : '#64748b'
+              order.status === 'Preparing' ? '#f59e0b' : '#64748b'
           }]}>
             {order.status}
           </Text>
@@ -72,7 +71,7 @@ const OrderDetailsScreen = ({ route, navigation }) => {
         {order.status !== 'Delivered' && (
           <TouchableOpacity
             style={styles.trackButton}
-            onPress={() => navigation.navigate('Tracking')}
+            onPress={() => navigation.navigate('Tracking', { order })}
           >
             <Text style={styles.trackButtonText}>Track Order</Text>
           </TouchableOpacity>

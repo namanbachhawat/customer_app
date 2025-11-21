@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
   ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 
 interface ButtonProps {
@@ -31,44 +31,44 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const getButtonStyle = () => {
     let buttonStyle = [styles.base];
-    
+
     // Add size styles
     if (size === 'small') buttonStyle.push(styles.small);
     else if (size === 'large') buttonStyle.push(styles.large);
     else buttonStyle.push(styles.medium);
-    
+
     // Add variant styles
     if (variant === 'secondary') buttonStyle.push(styles.secondary);
     else if (variant === 'outline') buttonStyle.push(styles.outline);
     else if (variant === 'ghost') buttonStyle.push(styles.ghost);
     else buttonStyle.push(styles.primary);
-    
+
     // Add disabled style
     if (disabled || loading) buttonStyle.push(styles.disabled);
-    
+
     // Add custom style
     if (style) buttonStyle.push(style);
-    
+
     return buttonStyle;
   };
 
   const getTextStyle = () => {
     let textStyleArray = [styles.text];
-    
+
     // Add size text styles
     if (size === 'small') textStyleArray.push(styles.smallText);
     else if (size === 'large') textStyleArray.push(styles.largeText);
     else textStyleArray.push(styles.mediumText);
-    
+
     // Add variant text styles
     if (variant === 'secondary') textStyleArray.push(styles.secondaryText);
     else if (variant === 'outline') textStyleArray.push(styles.outlineText);
     else if (variant === 'ghost') textStyleArray.push(styles.ghostText);
     else textStyleArray.push(styles.primaryText);
-    
+
     // Add custom text style
     if (textStyle) textStyleArray.push(textStyle);
-    
+
     return textStyleArray;
   };
 
@@ -111,11 +111,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   small: {
     paddingVertical: 8,

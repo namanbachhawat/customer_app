@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -19,13 +20,13 @@ const SupportScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const supportCategories = [
-    { id: 'order', name: 'Order Issues', icon: '📦' },
-    { id: 'payment', name: 'Payment Problems', icon: '💳' },
-    { id: 'delivery', name: 'Delivery Issues', icon: '🚚' },
-    { id: 'account', name: 'Account Help', icon: '👤' },
-    { id: 'app', name: 'App Feedback', icon: '📱' },
-    { id: 'other', name: 'Other', icon: '❓' },
+  const issueCategories = [
+    { id: 'order', name: 'Order Issues', icon: 'cube-outline' },
+    { id: 'payment', name: 'Payment Problems', icon: 'card-outline' },
+    { id: 'delivery', name: 'Delivery Issues', icon: 'bicycle-outline' },
+    { id: 'account', name: 'Account Help', icon: 'person-outline' },
+    { id: 'app', name: 'App Feedback', icon: 'phone-portrait-outline' },
+    { id: 'other', name: 'Other', icon: 'help-circle-outline' },
   ];
 
   const faqs = [
@@ -95,7 +96,11 @@ const SupportScreen = ({ navigation }) => {
       ]}
       onPress={() => setSelectedCategory(category.id)}
     >
-      <Text style={styles.categoryIcon}>{category.icon}</Text>
+      <Ionicons
+        name={category.icon}
+        size={28}
+        color={selectedCategory === category.id ? '#22c55e' : '#64748b'}
+      />
       <Text style={[
         styles.categoryName,
         selectedCategory === category.id && styles.selectedCategoryText,
@@ -122,7 +127,7 @@ const SupportScreen = ({ navigation }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Support Center</Text>
         <View style={{ width: 40 }} />
@@ -133,17 +138,23 @@ const SupportScreen = ({ navigation }) => {
         <View style={styles.quickContact}>
           <Text style={styles.sectionTitle}>Get in Touch</Text>
           <View style={styles.contactOptions}>
-            <TouchableOpacity style={styles.contactOption}>
-              <Text style={styles.contactIcon}>📞</Text>
-              <Text style={styles.contactText}>Call Us</Text>
+            <TouchableOpacity style={styles.contactItem}>
+              <View style={styles.contactIconContainer}>
+                <Ionicons name="call-outline" size={24} color="#22c55e" />
+              </View>
+              <Text style={styles.contactText}>Call: 1800-XXX-XXXX</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.contactOption}>
-              <Text style={styles.contactIcon}>💬</Text>
+            <TouchableOpacity style={styles.contactItem}>
+              <View style={styles.contactIconContainer}>
+                <Ionicons name="chatbubble-outline" size={24} color="#22c55e" />
+              </View>
               <Text style={styles.contactText}>Live Chat</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.contactOption}>
-              <Text style={styles.contactIcon}>✉️</Text>
-              <Text style={styles.contactText}>Email</Text>
+            <TouchableOpacity style={styles.contactItem}>
+              <View style={styles.contactIconContainer}>
+                <Ionicons name="mail-outline" size={24} color="#22c55e" />
+              </View>
+              <Text style={styles.contactText}>Email Us</Text>
             </TouchableOpacity>
           </View>
         </View>

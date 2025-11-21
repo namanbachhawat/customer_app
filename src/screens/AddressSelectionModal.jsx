@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  FlatList,
   Alert,
+  FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
@@ -45,18 +46,18 @@ const AddressSelectionModal = ({ visible, onClose, onSelectAddress, selectedAddr
       onPress={() => handleSelectAddress(item)}
     >
       <View style={styles.addressIcon}>
-        <Text style={styles.addressIconText}>
-          {item.name === 'Home' ? '🏠' : item.name === 'Work' ? '🏢' : '📍'}
-        </Text>
+        <Ionicons
+          name={item.name === 'Home' ? 'home-outline' : item.name === 'Work' ? 'business-outline' : 'location-outline'}
+          size={20}
+          color="#22c55e"
+        />
       </View>
       <View style={styles.addressDetails}>
         <Text style={styles.addressName}>{item.name}</Text>
         <Text style={styles.addressText}>{item.address}</Text>
       </View>
       {selectedAddress?.id === item.id && (
-        <View style={styles.checkmark}>
-          <Text style={styles.checkmarkText}>✓</Text>
-        </View>
+        <Ionicons name="checkmark" size={20} color="#22c55e" />
       )}
     </TouchableOpacity>
   );
@@ -70,7 +71,7 @@ const AddressSelectionModal = ({ visible, onClose, onSelectAddress, selectedAddr
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
+            <Ionicons name="close" size={24} color="#64748b" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Select Delivery Address</Text>
           <View style={styles.headerRight} />

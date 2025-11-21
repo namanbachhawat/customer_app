@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  FlatList,
-  Alert,
-  RefreshControl,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Card, CardContent } from '../components/Card';
-import AddressSelectionModal from './AddressSelectionModal';
 import api from '../services/api';
+import AddressSelectionModal from './AddressSelectionModal';
 
 const HomeScreen = ({ navigation }) => {
   const [searchText, setSearchText] = useState('');
@@ -76,25 +77,46 @@ const HomeScreen = ({ navigation }) => {
   };
 
   const handleSortPress = (sortKey) => {
-    setSortBy(sortKey);
-    // Sort vendors based on the selected criteria
-    const sortedVendors = [...vendors].sort((a, b) => {
-      switch (sortKey) {
-        case 'price_low':
-          return parseFloat(a.price.replace('₹', '').replace(' for two', '')) -
-                 parseFloat(b.price.replace('₹', '').replace(' for two', ''));
-        case 'price_high':
-          return parseFloat(b.price.replace('₹', '').replace(' for two', '')) -
-                 parseFloat(a.price.replace('₹', '').replace(' for two', ''));
-        case 'rating':
-          return b.rating - a.rating;
-        case 'distance':
-          return parseFloat(a.distance) - parseFloat(b.distance);
-        default:
-          return 0;
+    try {
+      console.log('handleSortPress called with:', sortKey);
+      if (!vendors) {
+        console.error('Vendors is null or undefined');
+        return;
       }
-    });
-    setVendors(sortedVendors);
+      if (!Array.isArray(vendors)) {
+        console.error('Vendors is not an array:', typeof vendors);
+        return;
+      }
+
+      setSortBy(sortKey);
+      // Sort vendors based on the selected criteria
+      const sortedVendors = [...vendors].sort((a, b) => {
+        const getPriceValue = (price) => {
+          if (typeof price === 'number') return price;
+          if (typeof price === 'string') {
+            return parseFloat(price.replace('₹', '').replace(' for two', '')) || 0;
+          }
+          return 0;
+        };
+
+        switch (sortKey) {
+          case 'price_low':
+            return getPriceValue(a.price) - getPriceValue(b.price);
+          case 'price_high':
+            return getPriceValue(b.price) - getPriceValue(a.price);
+          case 'rating':
+            return (b.rating || 0) - (a.rating || 0);
+          case 'distance':
+            return parseFloat(a.distance || '0') - parseFloat(b.distance || '0');
+          default:
+            return 0;
+        }
+      });
+      setVendors(sortedVendors);
+    } catch (error) {
+      console.error('Sort Error:', error);
+      Alert.alert('Sort Error', error.message + '\n' + error.stack);
+    }
   };
 
   const handleSeeAllOrderAgain = () => {
@@ -189,7 +211,7 @@ const HomeScreen = ({ navigation }) => {
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   const renderCategory = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.categoryItem}
       onPress={() => handleCategoryPress(item)}
     >
@@ -200,7 +222,7 @@ const HomeScreen = ({ navigation }) => {
   );
 
   const renderVendor = ({ item }) => (
-    <Card 
+    <Card
       style={styles.vendorCard}
       onPress={() => handleVendorPress(item)}
     >
@@ -233,7 +255,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.header}>
         <TouchableOpacity style={styles.addressContainer} onPress={handleAddressPress}>
           <View style={styles.locationIcon}>
-            <Text style={styles.locationIconText}>📍</Text>
+            <Ionicons name="location" size={16} color="#16a34a" />
           </View>
           <View>
             <Text style={styles.deliverToText}>Deliver to</Text>
@@ -243,16 +265,16 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </View>
           <View style={styles.dropdownIcon}>
-            <Text style={styles.dropdownIconText}>▼</Text>
+            <Ionicons name="chevron-down" size={12} color="#64748b" />
           </View>
         </TouchableOpacity>
-        
+
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleNotificationPress}
           >
-            <Text style={styles.actionIcon}>🔔</Text>
+            <Ionicons name="notifications-outline" size={20} color="#64748b" />
             {unreadNotificationsCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationText}>{unreadNotificationsCount}</Text>
@@ -263,7 +285,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.actionButton}
             onPress={() => navigation.navigate('Wallet')}
           >
-            <Text style={styles.actionIcon}>💰</Text>
+            <Ionicons name="wallet-outline" size={20} color="#64748b" />
             <Text style={styles.walletBalance}>₹{wallet.balance}</Text>
           </TouchableOpacity>
         </View>
@@ -271,7 +293,7 @@ const HomeScreen = ({ navigation }) => {
 
       {/* Search Bar */}
       <TouchableOpacity style={styles.searchContainer} onPress={handleSearch}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={18} color="#64748b" style={{ marginRight: 12 }} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search for food, drinks, vendors..."
@@ -354,11 +376,11 @@ const HomeScreen = ({ navigation }) => {
         {/* Order Again */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-             <Text style={styles.sectionTitle}>Order again</Text>
-             <TouchableOpacity onPress={handleSeeAllOrderAgain}>
-               <Text style={styles.seeAllText}>See all</Text>
-             </TouchableOpacity>
-           </View>
+            <Text style={styles.sectionTitle}>Order again</Text>
+            <TouchableOpacity onPress={handleSeeAllOrderAgain}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {[
               { id: 1, name: 'Masala Chai', price: 25, vendorId: 1, restaurantName: 'Green Tea House' },
@@ -400,11 +422,11 @@ const HomeScreen = ({ navigation }) => {
         {/* Popular Stores */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-             <Text style={styles.sectionTitle}>Popular stores near you</Text>
-             <TouchableOpacity onPress={handleSeeAllVendors}>
-               <Text style={styles.seeAllText}>See all ›</Text>
-             </TouchableOpacity>
-           </View>
+            <Text style={styles.sectionTitle}>Popular stores near you</Text>
+            <TouchableOpacity onPress={handleSeeAllVendors}>
+              <Text style={styles.seeAllText}>See all ›</Text>
+            </TouchableOpacity>
+          </View>
           <FlatList
             data={vendors}
             renderItem={renderVendor}
@@ -419,12 +441,12 @@ const HomeScreen = ({ navigation }) => {
       {/* Bottom Navigation Bar */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
-          <Text style={[styles.navIcon, { color: '#22c55e' }]}>🏠</Text>
+          <Ionicons name="home" size={24} color="#22c55e" />
           <Text style={[styles.navText, { color: '#22c55e' }]}>Home</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Cart')}>
           <View style={styles.navIconContainer}>
-            <Text style={[styles.navIcon, { color: '#64748b' }]}>🛒</Text>
+            <Ionicons name="cart-outline" size={24} color="#64748b" />
             {(cart.items || []).reduce((total, group) => total + group.items.length, 0) > 0 && (
               <View style={styles.cartBadge}>
                 <Text style={styles.cartBadgeText}>{(cart.items || []).reduce((total, group) => total + group.items.length, 0)}</Text>
@@ -434,11 +456,11 @@ const HomeScreen = ({ navigation }) => {
           <Text style={[styles.navText, { color: '#64748b' }]}>Cart</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Orders')}>
-          <Text style={[styles.navIcon, { color: '#64748b' }]}>📋</Text>
+          <Ionicons name="list-outline" size={24} color="#64748b" />
           <Text style={[styles.navText, { color: '#64748b' }]}>Orders</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
-          <Text style={[styles.navIcon, { color: '#64748b' }]}>👤</Text>
+          <Ionicons name="person-outline" size={24} color="#64748b" />
           <Text style={[styles.navText, { color: '#64748b' }]}>Profile</Text>
         </TouchableOpacity>
       </View>

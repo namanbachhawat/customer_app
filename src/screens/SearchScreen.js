@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
+  Alert,
   FlatList,
   Image,
-  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -23,24 +24,31 @@ const SearchScreen = ({ navigation, route }) => {
 
   const { searchQuery: initialQuery, category } = route.params || {};
 
+  // Categories list for UI
+  const categories = [
+    { id: 'all', name: 'All', icon: 'grid-outline', iconType: 'ionicons' },
+    { id: 'tea', name: 'Tea', icon: 'tea', iconType: 'material' },
+    { id: 'coffee', name: 'Coffee', icon: 'coffee', iconType: 'material' },
+    { id: 'snacks', name: 'Snacks', icon: 'cookie', iconType: 'material' },
+    { id: 'combos', name: 'Combos', icon: 'silverware-fork-knife', iconType: 'material' },
+    { id: 'desserts', name: 'Desserts', icon: 'cupcake', iconType: 'material' },
+  ];
+
   useEffect(() => {
     if (initialQuery) {
       setSearchQuery(initialQuery);
       performSearch(initialQuery);
     } else if (category) {
-      setSelectedCategory(category);
-      performSearch('', category);
+      // Find the category ID from the category name
+      const matchingCategory = categories.find(
+        cat => cat.name.toLowerCase() === category.toLowerCase()
+      );
+      const categoryId = matchingCategory ? matchingCategory.id : category.toLowerCase();
+      setSelectedCategory(categoryId);
+      performSearch('', categoryId);
     }
   }, [initialQuery, category]);
 
-  const categories = [
-    { id: 'all', name: 'All', icon: '🔍' },
-    { id: 'tea', name: 'Tea', icon: '☕' },
-    { id: 'coffee', name: 'Coffee', icon: '🍵' },
-    { id: 'snacks', name: 'Snacks', icon: '🍪' },
-    { id: 'combos', name: 'Combos', icon: '🍽️' },
-    { id: 'desserts', name: 'Desserts', icon: '🍰' },
-  ];
 
   const performSearch = async (query = searchQuery, categoryFilter = selectedCategory) => {
     if (!query.trim() && !categoryFilter) return;
@@ -98,7 +106,21 @@ const SearchScreen = ({ navigation, route }) => {
       ]}
       onPress={() => handleCategoryPress(item.id)}
     >
-      <Text style={styles.categoryIcon}>{item.icon}</Text>
+      {item.iconType === 'material' ? (
+        <MaterialCommunityIcons
+          name={item.icon}
+          size={18}
+          color={selectedCategory === item.id ? '#ffffff' : '#64748b'}
+          style={{ marginBottom: 4 }}
+        />
+      ) : (
+        <Ionicons
+          name={item.icon}
+          size={18}
+          color={selectedCategory === item.id ? '#ffffff' : '#64748b'}
+          style={{ marginBottom: 4 }}
+        />
+      )}
       <Text style={[
         styles.categoryName,
         selectedCategory === item.id && styles.selectedCategoryText,
@@ -153,7 +175,7 @@ const SearchScreen = ({ navigation, route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Search</Text>
         <View style={{ width: 40 }} />
@@ -170,7 +192,7 @@ const SearchScreen = ({ navigation, route }) => {
           placeholderTextColor="#64748b"
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={20} color="#64748b" />
         </TouchableOpacity>
       </View>
 
